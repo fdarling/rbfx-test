@@ -45,10 +45,6 @@ public:
         engineParameters_[EP_WINDOW_HEIGHT] = 720;
         engineParameters_[EP_WINDOW_RESIZABLE] = true;
         engineParameters_[EP_BORDERLESS] = false;
-        
-        // NOTE: these don't exist :-( there must be other APIs...
-        // engineParameters_[EP_SHADOW_MAP_SIZE] = 1024;
-        // engineParameters_[EP_SHADOW_QUALITY] = SHADOWQUALITY_SIMPLE_16BIT;
     }
 
     virtual void Start() override
@@ -69,21 +65,16 @@ public:
             RenderPipeline * const renderPipeline = scene_->CreateComponent<RenderPipeline>();
             RenderPipelineSettings settings = renderPipeline->GetSettings();
             settings.renderBufferManager_.readableDepth_ = true;
+            // settings.sceneProcessor_.directionalShadowSize_ = 2048;
+            // settings.sceneProcessor_.spotShadowSize_ = 2048;
+            settings.sceneProcessor_.pointShadowSize_ = 1024;
+            // TODO how to set the shadow map quality to 16-bit vs 32-bit?
             renderPipeline->SetSettings(settings);
             renderPipeline->SetRenderPassEnabled(eastl::string("Postprocess: SSAO"), true);
         }
 
         // Create procedural plane model for floor
         CreateFloor();
-
-        // Floor node
-        // Node* floorNode = scene_->CreateChild("Floor");
-        // floorNode->SetPosition(Vector3(0.0f, 0.0f, 0.0f));
-        // floorNode->SetScale(Vector3(50.0f, 1.0f, 50.0f));
-        // StaticModel* floorObject = floorNode->CreateComponent<StaticModel>();
-        // floorObject->SetModel(planeModel_);
-        // floorObject->SetMaterial(CreateMaterial(Color(0.8f, 0.8f, 0.8f)));
-        // floorObject->SetCastShadows(true);
 
         // Create cubes
         CreateCube(Vector3(-2.0f, 0.5f, 0.0f), Color(1.0f, 0.0f, 0.0f));
@@ -95,14 +86,15 @@ public:
 
         // Point light
         Node* lightNode = scene_->CreateChild("PointLight");
-        lightNode->SetPosition(Vector3(0.0f, 10.0f, -10.0f));
+        lightNode->SetPosition(Vector3(5.0f, 3.0f, 5.0f));
         Light* light = lightNode->CreateComponent<Light>();
         light->SetLightType(LIGHT_POINT);
         light->SetRange(50.0f);
         light->SetBrightness(1.5f);
         light->SetColor(Color(1.0f, 1.0f, 1.0f));
         light->SetCastShadows(true);
-        light->SetShadowBias(BiasParameters(0.00025f, 0.5f));
+        // light->SetShadowResolution(2048);
+        light->SetShadowBias(BiasParameters(0.0001f, -0.1f, 0.001));
         light->SetShadowCascade(CascadeParameters(10.0f, 50.0f, 200.0f, 0.0f, 0.8f));
 
         // Camera
@@ -157,7 +149,7 @@ public:
         if (input->GetKeyDown(KEY_D)) cameraNode_->Translate(Vector3::RIGHT * moveSpeed * timeStep);
 
         // Update debug HUD (shows FPS)
-        // debugHud_->SetMode(DEBUGHUD_SHOW_ALL);
+        debugHud_->SetMode(DEBUGHUD_SHOW_ALL);
     }
 
     void HandleMouseMove(StringHash eventType, VariantMap& eventData)
@@ -259,6 +251,7 @@ private:
         SharedPtr<Material> mat(new Material(context_));
         mat->SetTechnique(0, cache->GetResource<Technique>("Techniques/NoTextureAO.xml"));
         mat->SetShaderParameter(ShaderConsts::Material_MatDiffColor, color);
+        mat->SetShadowCullMode(CULL_CW);
         return mat;
     }
 
