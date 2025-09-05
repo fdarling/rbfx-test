@@ -21,6 +21,7 @@
 #include <Urho3D/Input/Input.h>
 #include <Urho3D/Input/InputEvents.h>
 #include <Urho3D/Resource/ResourceCache.h>
+#include <Urho3D/RenderPipeline/RenderPipeline.h>
 #include <Urho3D/RenderPipeline/ShaderConsts.h>
 #include <Urho3D/Scene/Scene.h>
 #include <Urho3D/SystemUI/DebugHud.h>
@@ -63,6 +64,14 @@ public:
         zone_->SetFogColor(Color(0.5f, 0.5f, 0.7f));
         zone_->SetFogStart(100.0f);
         zone_->SetFogEnd(300.0f);
+        
+        {
+            RenderPipeline * const renderPipeline = scene_->CreateComponent<RenderPipeline>();
+            RenderPipelineSettings settings = renderPipeline->GetSettings();
+            settings.renderBufferManager_.readableDepth_ = true;
+            renderPipeline->SetSettings(settings);
+            renderPipeline->SetRenderPassEnabled(eastl::string("Postprocess: SSAO"), true);
+        }
 
         // Create procedural plane model for floor
         CreateFloor();
@@ -248,7 +257,7 @@ private:
     {
         ResourceCache* cache = GetSubsystem<ResourceCache>();
         SharedPtr<Material> mat(new Material(context_));
-        mat->SetTechnique(0, cache->GetResource<Technique>("Techniques/Diff.xml"));
+        mat->SetTechnique(0, cache->GetResource<Technique>("Techniques/NoTextureAO.xml"));
         mat->SetShaderParameter(ShaderConsts::Material_MatDiffColor, color);
         return mat;
     }
