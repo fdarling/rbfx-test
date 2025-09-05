@@ -36,7 +36,7 @@ class MyApp : public Application
     URHO3D_OBJECT(MyApp, Application)
 
 public:
-    MyApp(Context* context) : Application(context), yaw_(0.0f), pitch_(0.0f) {}
+    MyApp(Context* context) : Application(context), yaw_(0.0f), pitch_(0.0f), drawDebug_(false) {}
 
     virtual void Setup() override
     {
@@ -54,13 +54,14 @@ public:
         // Create scene
         scene_ = new Scene(context_);
         octree_ = scene_->CreateComponent<Octree>();
+        DebugRenderer * const debugRenderer = scene_->CreateComponent<DebugRenderer>();
         zone_ = scene_->CreateComponent<Zone>();
         zone_->SetBoundingBox(BoundingBox(-1000.0f, 1000.0f));
         zone_->SetAmbientColor(Color(0.1f, 0.1f, 0.1f));
         zone_->SetFogColor(Color(0.5f, 0.5f, 0.7f));
         zone_->SetFogStart(100.0f);
         zone_->SetFogEnd(300.0f);
-        
+
         {
             RenderPipeline * const renderPipeline = scene_->CreateComponent<RenderPipeline>();
             RenderPipelineSettings settings = renderPipeline->GetSettings();
@@ -68,6 +69,7 @@ public:
             // settings.sceneProcessor_.directionalShadowSize_ = 2048;
             // settings.sceneProcessor_.spotShadowSize_ = 2048;
             settings.sceneProcessor_.pointShadowSize_ = 1024;
+            // settings.shadowMapAllocator_.shadowAtlasPageSize_ = 8192;
             // TODO how to set the shadow map quality to 16-bit vs 32-bit?
             renderPipeline->SetSettings(settings);
             renderPipeline->SetRenderPassEnabled(eastl::string("Postprocess: SSAO"), true);
@@ -124,6 +126,7 @@ public:
         SubscribeToEvent(E_KEYDOWN, URHO3D_HANDLER(MyApp, HandleKeyDown));
         SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(MyApp, HandleUpdate));
         SubscribeToEvent(E_MOUSEMOVE, URHO3D_HANDLER(MyApp, HandleMouseMove));
+        SubscribeToEvent(E_POSTRENDERUPDATE, URHO3D_HANDLER(MyApp, HandlePostRenderUpdate));
     }
 
     virtual void Stop() override {}
@@ -148,8 +151,18 @@ public:
         if (input->GetKeyDown(KEY_A)) cameraNode_->Translate(Vector3::LEFT * moveSpeed * timeStep);
         if (input->GetKeyDown(KEY_D)) cameraNode_->Translate(Vector3::RIGHT * moveSpeed * timeStep);
 
+        if (input->GetKeyPress(KEY_SPACE))
+            drawDebug_ = !drawDebug_;
+
         // Update debug HUD (shows FPS)
         debugHud_->SetMode(DEBUGHUD_SHOW_ALL);
+    }
+
+    void HandlePostRenderUpdate(StringHash eventType, VariantMap& eventData)
+    {
+        // If draw debug mode is enabled, draw viewport debug geometry. Disable depth test so that we can see the effect of occlusion
+        if (drawDebug_)
+            GetSubsystem<Renderer>()->DrawDebugGeometry(false);
     }
 
     void HandleMouseMove(StringHash eventType, VariantMap& eventData)
@@ -262,6 +275,7 @@ private:
     SharedPtr<Zone> zone_;
     float yaw_;
     float pitch_;
+    bool drawDebug_;
 };
 
 URHO3D_DEFINE_APPLICATION_MAIN(MyApp);
