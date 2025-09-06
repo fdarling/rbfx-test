@@ -18,6 +18,10 @@
 #include <Urho3D/Graphics/VertexBuffer.h>
 #include <Urho3D/Graphics/Viewport.h>
 #include <Urho3D/Graphics/Zone.h>
+#include <Urho3D/Physics/CollisionShape.h>
+#include <Urho3D/Physics/PhysicsEvents.h>
+#include <Urho3D/Physics/PhysicsWorld.h>
+#include <Urho3D/Physics/RigidBody.h>
 #include <Urho3D/Input/Input.h>
 #include <Urho3D/Input/InputEvents.h>
 #include <Urho3D/Resource/ResourceCache.h>
@@ -45,6 +49,7 @@ public:
         engineParameters_[EP_WINDOW_HEIGHT] = 720;
         engineParameters_[EP_WINDOW_RESIZABLE] = true;
         engineParameters_[EP_BORDERLESS] = false;
+        engineParameters_[EP_VSYNC] = true;
     }
 
     virtual void Start() override
@@ -54,6 +59,8 @@ public:
         // Create scene
         scene_ = new Scene(context_);
         octree_ = scene_->CreateComponent<Octree>();
+        physicsWorld_ = scene_->CreateComponent<PhysicsWorld>();
+        //physicsWorld_->SetFps(60); // TODO is this necessary?
         DebugRenderer * const debugRenderer = scene_->CreateComponent<DebugRenderer>();
         zone_ = scene_->CreateComponent<Zone>();
         zone_->SetBoundingBox(BoundingBox(-1000.0f, 1000.0f));
@@ -126,6 +133,7 @@ public:
         SubscribeToEvent(E_KEYDOWN, URHO3D_HANDLER(MyApp, HandleKeyDown));
         SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(MyApp, HandleUpdate));
         SubscribeToEvent(E_MOUSEMOVE, URHO3D_HANDLER(MyApp, HandleMouseMove));
+        // SubscribeToEvent(E_PHYSICSCOLLISION, URHO3D_HANDLER(MyApp, HandlePhysicsCollision));
         SubscribeToEvent(E_POSTRENDERUPDATE, URHO3D_HANDLER(MyApp, HandlePostRenderUpdate));
     }
 
@@ -154,6 +162,25 @@ public:
         if (input->GetKeyPress(KEY_SPACE))
             drawDebug_ = !drawDebug_;
 
+        // shoot sphere on left mouse click
+        if (input->GetMouseButtonPress(MOUSEB_LEFT))
+        {
+            // Graphical representation
+            Node *sphereNode = CreateSphere(cameraNode_->GetWorldPosition(), Color(1.0f, 1.0f, 1.0f));
+
+            // Physics representation
+            RigidBody* body = sphereNode->CreateComponent<RigidBody>();
+            body->SetMass(1.0f);
+            body->SetFriction(0.5f);
+            CollisionShape* shape = sphereNode->CreateComponent<CollisionShape>();
+            shape->SetSphere(1.0f); // Diameter of 1.0f (radius 0.5f)
+
+            // Shoot in camera direction
+            Vector3 direction = cameraNode_->GetWorldDirection().Normalized();
+            float speed = 20.0f;
+            body->SetLinearVelocity(direction * speed);
+        }
+
         // Update debug HUD (shows FPS)
         debugHud_->SetMode(DEBUGHUD_SHOW_ALL);
     }
@@ -162,7 +189,10 @@ public:
     {
         // If draw debug mode is enabled, draw viewport debug geometry. Disable depth test so that we can see the effect of occlusion
         if (drawDebug_)
-            GetSubsystem<Renderer>()->DrawDebugGeometry(false);
+        {
+            // GetSubsystem<Renderer>()->DrawDebugGeometry(false);
+            physicsWorld_->DrawDebugGeometry(true);
+        }
     }
 
     void HandleMouseMove(StringHash eventType, VariantMap& eventData)
@@ -179,6 +209,35 @@ public:
         pitch_ = Clamp(pitch_, -90.0f, 90.0f);
 
         cameraNode_->SetRotation(Quaternion(pitch_, yaw_, 0.0f));
+    }
+
+    void HandlePhysicsCollision(StringHash eventType, VariantMap& eventData)
+    {
+        Node* nodeA = static_cast<Node*>(eventData[PhysicsCollision::P_NODEA].GetPtr());
+        Node* nodeB = static_cast<Node*>(eventData[PhysicsCollision::P_NODEB].GetPtr());
+        RigidBody* bodyA = static_cast<RigidBody*>(eventData[PhysicsCollision::P_BODYA].GetPtr());
+        RigidBody* bodyB = static_cast<RigidBody*>(eventData[PhysicsCollision::P_BODYB].GetPtr());
+        VectorBuffer contacts = eventData[PhysicsCollision::P_CONTACTS].GetVectorBuffer();
+
+        // Process each contact point
+        while (!contacts.IsEof())
+        {
+            Vector3 position = contacts.ReadVector3();
+            Vector3 normal = contacts.ReadVector3();
+            float distance = contacts.ReadFloat();
+            float impulse = contacts.ReadFloat();
+
+            // Log contact details (similar to gContactProcessedCallback)
+            URHO3D_LOGINFOF("Collision between %s and %s: Impulse=%.2f, Position=(%.2f, %.2f, %.2f)",
+                            nodeA->GetName().c_str(), nodeB->GetName().c_str(),
+                            impulse, position.x_, position.y_, position.z_);
+
+            // Example: Play sound or modify contact properties based on impulse
+            if (impulse > 0.1f) // Threshold for significant impact
+            {
+                // Add custom logic, e.g., play sound, spawn particles
+            }
+        }
     }
 
 private:
@@ -199,6 +258,12 @@ private:
         floorGeom->Commit();
         floorGeom->SetMaterial(CreateMaterial(Color(0.8f, 0.8f, 0.8f)));
         floorGeom->SetCastShadows(false);  // Floor doesn't cast shadows
+
+        RigidBody* floorBody = floorNode->CreateComponent<RigidBody>();
+        floorBody->SetMass(0.0f); // Static body
+        CollisionShape* floorShape = floorNode->CreateComponent<CollisionShape>();
+        floorShape->SetBox(Vector3(20.0f, 1.0f, 20.0f), Vector3(0.0f, -0.5f, 0.0f));
+        // floorShape->SetTriangleMesh(floorGeom->GetLodGeometry(0, 0));
     }
 
     void CreateCube(const Vector3& pos, const Color& color)
@@ -256,6 +321,75 @@ private:
         cubeGeom->Commit();
         cubeGeom->SetMaterial(CreateMaterial(color));
         cubeGeom->SetCastShadows(true);
+
+        RigidBody* cubeBody = cubeNode->CreateComponent<RigidBody>();
+        cubeBody->SetMass(1.0f); // Dynamic body
+        cubeBody->SetFriction(0.5f);
+        CollisionShape* cubeShape = cubeNode->CreateComponent<CollisionShape>();
+        cubeShape->SetBox(Vector3(1.0f, 1.0f, 1.0f));
+        // cubeShape->SetBox(Vector3(1.0f, 1.0f, 1.0f), pos);
+    }
+
+    Node * CreateSphere(const Vector3& pos, const Color& color)
+    {
+        Node* sphereNode = scene_->CreateChild("Sphere");
+        sphereNode->SetPosition(pos);
+        sphereNode->SetScale(Vector3(1.0f, 1.0f, 1.0f));
+        CustomGeometry* sphereGeom = sphereNode->CreateComponent<CustomGeometry>();
+        sphereGeom->BeginGeometry(0, TRIANGLE_LIST);
+
+        const unsigned stacks = 8; // Vertical segments
+        const unsigned slices = 16; // Horizontal segments
+        const float radius = 0.5f;
+
+        for (unsigned stack = 0; stack < stacks; ++stack)
+        {
+            float phi1 = static_cast<float>(stack) * M_PI / stacks;
+            float phi2 = static_cast<float>(stack + 1) * M_PI / stacks;
+
+            float sinPhi1 = Sin(phi1 * 180.0f / M_PI);
+            float cosPhi1 = Cos(phi1 * 180.0f / M_PI);
+            float sinPhi2 = Sin(phi2 * 180.0f / M_PI);
+            float cosPhi2 = Cos(phi2 * 180.0f / M_PI);
+
+            for (unsigned slice = 0; slice < slices; ++slice)
+            {
+                float theta1 = static_cast<float>(slice) * 360.0f / slices;
+                float theta2 = static_cast<float>(slice + 1) * 360.0f / slices;
+
+                // Vertex 1
+                Vector3 v1 = Vector3(sinPhi1 * Cos(theta1), cosPhi1, sinPhi1 * Sin(theta1)) * radius;
+                sphereGeom->DefineVertex(v1);
+                sphereGeom->DefineNormal(v1.Normalized());
+
+                // Vertex 2
+                Vector3 v2 = Vector3(sinPhi2 * Cos(theta1), cosPhi2, sinPhi2 * Sin(theta1)) * radius;
+                sphereGeom->DefineVertex(v2);
+                sphereGeom->DefineNormal(v2.Normalized());
+
+                // Vertex 3
+                Vector3 v3 = Vector3(sinPhi1 * Cos(theta2), cosPhi1, sinPhi1 * Sin(theta2)) * radius;
+                sphereGeom->DefineVertex(v3);
+                sphereGeom->DefineNormal(v3.Normalized());
+
+                // Vertex 4 (for second triangle)
+                Vector3 v4 = Vector3(sinPhi2 * Cos(theta2), cosPhi2, sinPhi2 * Sin(theta2)) * radius;
+
+                // Second triangle
+                sphereGeom->DefineVertex(v2);
+                sphereGeom->DefineNormal(v2.Normalized());
+                sphereGeom->DefineVertex(v4);
+                sphereGeom->DefineNormal(v4.Normalized());
+                sphereGeom->DefineVertex(v3);
+                sphereGeom->DefineNormal(v3.Normalized());
+            }
+        }
+
+        sphereGeom->Commit();
+        sphereGeom->SetMaterial(CreateMaterial(color));
+        sphereGeom->SetCastShadows(true);
+
+        return sphereNode;
     }
 
     SharedPtr<Material> CreateMaterial(const Color& color)
@@ -271,6 +405,7 @@ private:
     SharedPtr<Scene> scene_;
     SharedPtr<Node> cameraNode_;
     SharedPtr<DebugHud> debugHud_;
+    SharedPtr<PhysicsWorld> physicsWorld_;
     SharedPtr<Octree> octree_;
     SharedPtr<Zone> zone_;
     float yaw_;
