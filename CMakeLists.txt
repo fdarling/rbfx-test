@@ -11,6 +11,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #list(APPEND CMAKE_PREFIX_PATH "/home/USERNAME/apps/rbfx/share")
 find_package(Urho3D REQUIRED)
 find_package(sdl2 REQUIRED)
+find_package(assimp REQUIRED)
+
+add_compile_definitions(USING_RBFX)
 
 add_library(rbfx_test_pch INTERFACE)
 add_library(rbfx_test::pch ALIAS rbfx_test_pch)
@@ -53,13 +56,16 @@ target_precompile_headers(rbfx_test_pch INTERFACE
 
 include_directories(
     ${SDL2_INCLUDE_DIRS}
+    ${ASSIMP_INCLUDE_DIRS}
 )
 
 add_executable(${PROJECT_NAME}
+    src/SceneLoader.cpp
     src/main.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Urho3D
+    ${ASSIMP_LIBRARIES}
     rbfx_test::pch
 )
