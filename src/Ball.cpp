@@ -17,17 +17,16 @@ using Urho3D::CollisionShape;
 
 Urho3D::SharedPtr<Urho3D::Model> Ball::sphereModel_;
 
-static const float BALL_RADIUS = 0.25;
 static const float BALL_DIAMETER = BALL_RADIUS*2.0;
 
 Ball::Ball(Urho3D::Scene *scene, const Urho3D::Vector3 &pos, const Urho3D::Vector3 &vel, const Urho3D::Color &color) :
     node_(nullptr)
 {
-    node_ = scene->CreateChild("Sphere");
+    node_ = scene->CreateChild("Ball");
     // node_->SetScale(Vector3(1.0f, 1.0f, 1.0f));
     node_->SetPosition(pos);
 
-    // possibly reate and cache the model
+    // possibly create and cache the model
     if (!sphereModel_)
         sphereModel_ = CreateSphereModel(scene->GetContext()); // TODO support multiple contexts!
 

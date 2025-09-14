@@ -11,7 +11,6 @@
 #include <Urho3D/Graphics/Zone.h>
 #include <Urho3D/Input/Input.h>
 #include <Urho3D/Input/InputEvents.h>
-#include <Urho3D/Physics/PhysicsEvents.h>
 #include <Urho3D/Physics/PhysicsWorld.h>
 #include <Urho3D/Physics/RigidBody.h>
 #ifdef USING_RBFX
@@ -30,6 +29,7 @@
 #include <Urho3D/UI/UIEvents.h>
 
 #include "SceneLoader.h"
+#include "Player.h"
 #include "JumpPad.h"
 #include "Ladder.h"
 #include "Ball.h"
@@ -99,6 +99,7 @@ public:
         loadSceneWithAssimp("../assets/test_scene_torus.glb", scene_, context_);
 
         // TODO store pointers, we are leaking these object currently!
+        Player * const player = new Player(scene_, Vector3(6, PLAYER_HEIGHT/2.0+0.01, 0));
         JumpPad * const jumpPad = new JumpPad(scene_, Vector3(2.0, 0.25, 0.0), Vector3(2.0, 0.5, 2.0));
         Ladder * const ladder = new Ladder(scene_, Vector3(4.0, 8.0, 4.0), Vector3(2.0, 16.0, 2.0));
 
@@ -141,7 +142,6 @@ public:
         SubscribeToEvent(E_KEYDOWN, URHO3D_HANDLER(MyApp, HandleKeyDown));
         SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(MyApp, HandleUpdate));
         SubscribeToEvent(E_MOUSEMOVE, URHO3D_HANDLER(MyApp, HandleMouseMove));
-        SubscribeToEvent(E_PHYSICSCOLLISION, URHO3D_HANDLER(MyApp, HandlePhysicsCollision));
         SubscribeToEvent(E_POSTRENDERUPDATE, URHO3D_HANDLER(MyApp, HandlePostRenderUpdate));
     }
 
@@ -170,14 +170,16 @@ public:
         if (input->GetKeyDown(KEY_A)) cameraNode_->Translate(Vector3::LEFT * walkDistance);
         if (input->GetKeyDown(KEY_D)) cameraNode_->Translate(Vector3::RIGHT * walkDistance);
 
+        // TODO player movement
+
         // toggle graphics debug rendering
         if (input->GetKeyPress(KEY_Z))
             drawDebug_ = !drawDebug_;
-        
+
         // toggle wireframe rendering
         if (input->GetKeyPress(KEY_X))
             camera_->SetFillMode(camera_->GetFillMode() == FILL_WIREFRAME ? FILL_SOLID : FILL_WIREFRAME);
-        
+
         // toggle debug drawing
         if (input->GetKeyPress(KEY_SPACE))
             drawPhysicsDebug_ = !drawPhysicsDebug_;
@@ -223,48 +225,6 @@ public:
         pitch_ = Clamp(pitch_, -90.0f, 90.0f);
 
         cameraNode_->SetRotation(Quaternion(pitch_, yaw_, 0.0f));
-    }
-
-    void HandlePhysicsCollision(StringHash eventType, VariantMap &eventData)
-    {
-        Node * const nodeA = static_cast<Node*>(eventData[PhysicsCollision::P_NODEA].GetPtr());
-        Node * const nodeB = static_cast<Node*>(eventData[PhysicsCollision::P_NODEB].GetPtr());
-        RigidBody * const bodyA = static_cast<RigidBody*>(eventData[PhysicsCollision::P_BODYA].GetPtr());
-        RigidBody * const bodyB = static_cast<RigidBody*>(eventData[PhysicsCollision::P_BODYB].GetPtr());
-        VectorBuffer contacts = eventData[PhysicsCollision::P_CONTACTS].GetVectorBuffer();
-
-        RigidBody *toLaunch = nullptr;
-        if (bodyA->GetBody()->getUserIndex() == PhysicsUserIndex::JumpPad)
-            toLaunch = bodyB;
-        else if (bodyB->GetBody()->getUserIndex() == PhysicsUserIndex::JumpPad)
-            toLaunch = bodyA;
-        if (toLaunch)
-        {
-            Vector3 vel = toLaunch->GetLinearVelocity();
-            vel.y_ = 10.0;
-            toLaunch->SetLinearVelocity(vel);
-        }
-        // Process each contact point
-        /*while (!contacts.IsEof())
-        {
-            Vector3 position = contacts.ReadVector3();
-            Vector3 normal = contacts.ReadVector3();
-            float distance = contacts.ReadFloat();
-            float impulse = contacts.ReadFloat();
-
-            // Log contact details (similar to gContactProcessedCallback)
-#ifdef USING_RBFX // TODO: use alternative string methods
-            URHO3D_LOGINFOF("Collision between %s and %s: Impulse=%.2f, Position=(%.2f, %.2f, %.2f)",
-                            nodeA->GetName().c_str(), nodeB->GetName().c_str(),
-                            impulse, position.x_, position.y_, position.z_);
-#endif // USING_RBFX
-
-            // Example: Play sound or modify contact properties based on impulse
-            if (impulse > 0.1f) // Threshold for significant impact
-            {
-                // Add custom logic, e.g., play sound, spawn particles
-            }
-        }*/
     }
 private:
     SharedPtr<Scene> scene_;
