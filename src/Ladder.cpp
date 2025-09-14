@@ -84,7 +84,7 @@ void Ladder::ConstrainNode(Urho3D::Node *otherNode)
 
     // actually add the constraint
     btDiscreteDynamicsWorld * const world = body_->GetPhysicsWorld()->GetWorld();
-    world->addConstraint(constraint, false); // the bool is for whether the constrained bodies can collide
+    world->addConstraint(constraint, false); // the bool is for whether the constrained bodies are exempt from colliding with each other
 
     // remember that we constrained it
     constrainedNodes_.insert({otherNode, constraint});
