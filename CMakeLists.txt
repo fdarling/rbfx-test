@@ -63,9 +63,11 @@ add_executable(${PROJECT_NAME}
     src/CreateMaterial.cpp
     src/CreatePrimitives.cpp
     src/SceneLoader.cpp
+    src/KinematicRigidBody.cpp
     src/Player.cpp
     src/JumpPad.cpp
     src/Ladder.cpp
+    src/Elevator.cpp
     src/Ball.cpp
     src/main.cpp
 )
