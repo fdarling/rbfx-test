@@ -5,7 +5,7 @@
 #include <Urho3D/Physics/RigidBody.h>
 #include <Urho3D/Scene/Node.h>
 
-#include <Urho3D/ThirdParty/Bullet/BulletDynamics/Dynamics/btRigidBody.h>
+#include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
 
 using Urho3D::Node;
 using Urho3D::Vector3;

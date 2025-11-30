@@ -2,7 +2,7 @@
 
 #include <Urho3D/Physics/RigidBody.h>
 
-#include <Urho3D/ThirdParty/Bullet/LinearMath/btTransform.h>
+#include <Bullet/LinearMath/btTransform.h>
 
 class KinematicRigidBody : public Urho3D::RigidBody
 {

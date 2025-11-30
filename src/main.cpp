@@ -31,9 +31,9 @@
 #include "Ball.h"
 #include "globals.h"
 
-#include <Urho3D/ThirdParty/Bullet/BulletDynamics/Dynamics/btRigidBody.h>
-#include <Urho3D/ThirdParty/Bullet/BulletCollision/NarrowPhaseCollision/btManifoldPoint.h>
-#include <Urho3D/ThirdParty/Bullet/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h> // for gContactProcessedCallback
+#include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
+#include <Bullet/BulletCollision/NarrowPhaseCollision/btManifoldPoint.h>
+#include <Bullet/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h> // for gContactProcessedCallback
 
 using namespace Urho3D;
 

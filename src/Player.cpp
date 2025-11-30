@@ -14,8 +14,8 @@
 #include <Urho3D/Physics/CollisionShape.h>
 #include <Urho3D/Scene/Scene.h>
 
-#include <Urho3D/ThirdParty/Bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <Urho3D/ThirdParty/Bullet/BulletDynamics/Dynamics/btRigidBody.h>
+#include <Bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
 
 using Urho3D::Time;
 using Urho3D::Node;

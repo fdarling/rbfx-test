@@ -3,7 +3,7 @@
 #include <Urho3D/Core/Object.h>
 #include <Urho3D/Core/Variant.h>
 
-#include <Urho3D/ThirdParty/Bullet/LinearMath/btTransform.h>
+#include <Bullet/LinearMath/btTransform.h>
 
 // forward declarations
 namespace Urho3D {

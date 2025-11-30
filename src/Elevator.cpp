@@ -10,8 +10,8 @@
 #include <Urho3D/Scene/Scene.h>
 #include <Urho3D/Scene/Node.h>
 
-#include <Urho3D/ThirdParty/Bullet/BulletDynamics/Dynamics/btRigidBody.h>
-#include <Urho3D/ThirdParty/Bullet/LinearMath/btTransformUtil.h>
+#include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
+#include <Bullet/LinearMath/btTransformUtil.h>
 
 using Urho3D::Node;
 using Urho3D::Vector3;
