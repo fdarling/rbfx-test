@@ -1,6 +1,7 @@
 #include "JoltCollisionShape.h"
 #include "JoltRigidBody.h"
 #include "JoltPhysicsWorld.h"
+#include "JoltPhysicsUtils.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Reference.h> // for JPH::Ref
@@ -16,12 +17,6 @@
 #include <Jolt/Physics/PhysicsSystem.h> // for JPH::PhysicsSystem
 
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
-
-// TODO consolidate this
-static JPH::Vec3 UrhoVector3ToJoltVec3(const Urho3D::Vector3 &inVec)
-{
-    return JPH::Vec3(inVec.x_, inVec.y_, inVec.z_);
-}
 
 static ea::vector< JPH::Ref<JPH::Shape> > ModelToJoltConvexHulls(Urho3D::Model *model, unsigned lodLevel)
 {
@@ -288,7 +283,7 @@ void JoltCollisionShape::NotifyRigidBody()
     JPH::BodyInterface &body_interface = joltPhysicsWorld->GetPhysicsSystem().GetBodyInterface();
 
     // determine the node's scale
-    const JPH::Vec3 scale = UrhoVector3ToJoltVec3(node->GetWorldScale());
+    const JPH::Vec3 scale = ToJoltVec3(node->GetWorldScale());
     if (scale != JPH::Vec3(1.0, 1.0, 1.0))
         joltScaledShape_ = new JPH::ScaledShape(joltUnscaledShape_, scale);
 

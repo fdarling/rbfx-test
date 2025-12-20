@@ -418,7 +418,7 @@ static void processAssimpNode(const aiNode * const ai_node, const aiScene * cons
     }
 
     // check for custom game object type
-    /*if (const aiMetadata * const metadata = ai_node->mMetaData)
+    if (const aiMetadata * const metadata = ai_node->mMetaData)
     {
         for (unsigned int i = 0; i < metadata->mNumProperties; ++i)
         {
@@ -434,17 +434,17 @@ static void processAssimpNode(const aiNode * const ai_node, const aiScene * cons
                 {
                     JumpPad * const jumpPad = new JumpPad(currentNode);
                 }
-                else if (strcmp(type, "Ladder") == 0)
-                {
-                    Ladder * const ladder = new Ladder(currentNode);
-                }
-                else if (strcmp(type, "Elevator") == 0)
-                {
-                    Elevator * const elevator = new Elevator(currentNode);
-                }
+                // else if (strcmp(type, "Ladder") == 0)
+                // {
+                    // Ladder * const ladder = new Ladder(currentNode);
+                // }
+                // else if (strcmp(type, "Elevator") == 0)
+                // {
+                    // Elevator * const elevator = new Elevator(currentNode);
+                // }
             }
         }
-    }*/
+    }
 
     AddText3DLabel(currentNode, ai_node->mName.C_Str());
 

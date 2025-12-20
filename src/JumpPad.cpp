@@ -1,4 +1,8 @@
 #include "JumpPad.h"
+#include "JoltPhysicsEvents.h"
+#include "JoltPhysicsUtils.h"
+#include "JoltPhysicsWorld.h"
+#include "JoltRigidBody.h"
 #include "globals.h"
 
 #include <Urho3D/Physics/PhysicsEvents.h>
@@ -17,14 +21,17 @@ JumpPad::JumpPad(Urho3D::Node *node) :
     Urho3D::Object(node->GetContext()),
     node_(node)
 {
-    RigidBody * const rigidBody = node_->GetComponent<RigidBody>();
+    /*RigidBody * const rigidBody = node_->GetComponent<RigidBody>();
 
     btRigidBody * const bulletBody = rigidBody->GetBody();
     bulletBody->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE); // doesn't collide with anything!
     // bulletBody->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK); // for contact added callback to be called
     bulletBody->setUserIndex(PhysicsUserIndex::JumpPad);
 
-    SubscribeToEvent(node_, E_NODECOLLISIONSTART, URHO3D_HANDLER(JumpPad, HandleNodeCollision));
+    SubscribeToEvent(node_, E_NODECOLLISIONSTART, URHO3D_HANDLER(JumpPad, HandleNodeCollision));*/
+    SubscribeToEvent(node_, E_JOLTNODECOLLISIONSTART, URHO3D_HANDLER(JumpPad, HandleNodeCollision));
+    JoltPhysicsWorld * const physicsWorld = node_->GetScene()->GetComponent<JoltPhysicsWorld>();
+    SubscribeToEvent(physicsWorld, E_JOLTPHYSICSPOSTSTEP, URHO3D_HANDLER(JumpPad, HandlePhysicsPostStep));
 }
 
 JumpPad::~JumpPad()
@@ -35,12 +42,30 @@ JumpPad::~JumpPad()
 
 void JumpPad::HandleNodeCollision(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
 {
-    Node * const nodeB = static_cast<Node*>(eventData[NodeCollisionStart::P_OTHERNODE].GetPtr());
+    URHO3D_LOGINFO("JumpPad::HandleNodeCollision()");
+    /*Node * const nodeB = static_cast<Node*>(eventData[NodeCollisionStart::P_OTHERNODE].GetPtr());
     RigidBody * const bodyB = static_cast<RigidBody*>(eventData[NodeCollisionStart::P_OTHERBODY].GetPtr());
     if (bodyB)
     {
         Vector3 vel = bodyB->GetLinearVelocity();
         vel.y_ = 10.0;
         bodyB->SetLinearVelocity(vel);
+    }*/
+    // Node * const otherNode = static_cast<Node*>(eventData[JoltNodeCollisionStart::P_OTHERNODE].GetPtr());
+    JoltRigidBody * const otherBody = static_cast<JoltRigidBody*>(eventData[JoltNodeCollisionStart::P_OTHERBODY].GetPtr());
+    if (!otherBody)
+        return;
+    // toLaunch_.push_back(Urho3D::WeakPtr<JoltRigidBody>(otherBody));
+    toLaunch_.emplace_back(otherBody);
+}
+
+void JumpPad::HandlePhysicsPostStep(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
+{
+    for (Urho3D::WeakPtr<JoltRigidBody> &otherBody : toLaunch_)
+    {
+        Vector3 vel = otherBody->GetLinearVelocity();
+        vel.y_ = 10.0;
+        otherBody->SetLinearVelocity(vel);
     }
+    toLaunch_.clear();
 }

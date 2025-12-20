@@ -1,6 +1,7 @@
 #include "JoltRigidBody.h"
 #include "JoltPhysicsWorld.h"
 #include "JoltPhysicsDefs.h"
+#include "JoltPhysicsUtils.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
@@ -11,19 +12,6 @@
 #include <functional>
 #include <utility>
 // #include <iostream>
-
-// TODO consolidate this
-static JPH::Vec3 UrhoVector3ToJoltVec3(const Urho3D::Vector3 &inVec)
-{
-    return JPH::Vec3(inVec.x_, inVec.y_, inVec.z_);
-}
-
-static JPH::Quat UrhoQuaternionToJoltQuat(const Urho3D::Quaternion &inQuat)
-{
-    // static const float MULTIPLIER = Urho3D::M_PI/180.0;
-    static const float MULTIPLIER = 1.0;
-    return JPH::Quat(inQuat.x_*MULTIPLIER, inQuat.y_*MULTIPLIER, inQuat.z_*MULTIPLIER, inQuat.w_*MULTIPLIER);
-}
 
 JoltRigidBody::JoltRigidBody(Urho3D::Context *context) :
     Component(context)
@@ -57,6 +45,24 @@ void JoltRigidBody::ReleaseBody()
     }
 }
 
+template <typename ValueType, typename BodyInterfaceType>
+ValueType JoltRigidBody::BodyAttributeGetter(ValueType (BodyInterfaceType::*GetterFunc)(const JPH::BodyID &) const) const
+{
+    // make sure we have a body to update
+    if (!joltPhysicsWorld_ || joltBodyId_.IsInvalid())
+        return ValueType(); // TODO support defining a default in the template, or in the arguments
+
+    // get the body interface
+    JPH::BodyInterface &body_interface = joltPhysicsWorld_->GetPhysicsSystem().GetBodyInterface();
+
+    // call the appropriate body interface method
+    return std::invoke(
+        GetterFunc, // member function pointer
+        body_interface, // object instance
+        joltBodyId_ // first method argument
+    );
+}
+
 template <typename ValueType, typename BodyInterfaceType, typename... Args, typename... RestArgs>
 void JoltRigidBody::BodyAttributeSetter(
     ValueType JPH::BodyCreationSettings::*SettingPtr,
@@ -77,7 +83,7 @@ void JoltRigidBody::BodyAttributeSetter(
         return;
 
     // get the body interface
-    JPH::BodyInterface& body_interface = joltPhysicsWorld_->GetPhysicsSystem().GetBodyInterface();
+    JPH::BodyInterface &body_interface = joltPhysicsWorld_->GetPhysicsSystem().GetBodyInterface();
 
     // call the appropriate body interface method
     std::invoke(
@@ -87,6 +93,11 @@ void JoltRigidBody::BodyAttributeSetter(
         joltBodySettings_.*SettingPtr, // second method argument
         std::forward<RestArgs>(restArgs)... // any other arguments
     );
+}
+
+Urho3D::Vector3 JoltRigidBody::GetLinearVelocity() const
+{
+    return ToVector3(BodyAttributeGetter(&JPH::BodyInterface::GetLinearVelocity));
 }
 
 void JoltRigidBody::SetAllowedDOFs(AllowedDOFs dofs)
@@ -158,7 +169,7 @@ void JoltRigidBody::SetLinearVelocity(const Urho3D::Vector3 &velocity)
     if (!joltPhysicsWorld_ || joltBodyId_.IsInvalid())
         return;
     JPH::BodyInterface &body_interface = joltPhysicsWorld_->GetPhysicsSystem().GetBodyInterface();
-    body_interface.SetLinearVelocity(joltBodyId_, UrhoVector3ToJoltVec3(velocity));
+    body_interface.SetLinearVelocity(joltBodyId_, ToJoltVec3(velocity));
 }
 
 void JoltRigidBody::SetRestitution(float restitution)
@@ -179,8 +190,8 @@ void JoltRigidBody::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scen
         if (scene == node)
             URHO3D_LOGWARNING(GetTypeName() + " should not be created to the root scene node");
 
-        const JPH::Vec3 joltPos = UrhoVector3ToJoltVec3(node->GetWorldPosition());
-        const JPH::Quat joltRot = UrhoQuaternionToJoltQuat(node->GetWorldRotation());
+        const JPH::Vec3 joltPos = ToJoltVec3(node->GetWorldPosition());
+        const JPH::Quat joltRot = ToJoltQuat(node->GetWorldRotation());
         // std::cout << "joltPos: " << joltPos << " joltRot: " << joltRot << std::endl;
 
         joltPhysicsWorld_ = scene->GetOrCreateComponent<JoltPhysicsWorld>();

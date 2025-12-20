@@ -30,6 +30,8 @@ public:
     JPH::BodyID GetBodyID() {return joltBodyId_;}
     JPH::BodyID GetBodyID() const {return joltBodyId_;}
 
+    Urho3D::Vector3 GetLinearVelocity() const;
+
     void SetAllowedDOFs(AllowedDOFs dofs);
     void SetFriction(float friction);
     void SetMotionType(MotionType motionType);
@@ -39,6 +41,8 @@ public:
 protected:
     void OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scene) override;
 private:
+    template <typename ValueType, typename BodyInterfaceType>
+    ValueType BodyAttributeGetter(ValueType (BodyInterfaceType::*GetterFunc)(const JPH::BodyID &) const) const;
     template <typename ValueType, typename BodyInterfaceType, typename... Args, typename... RestArgs>
     void BodyAttributeSetter(
         ValueType JPH::BodyCreationSettings::*SettingPtr,

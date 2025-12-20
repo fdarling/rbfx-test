@@ -3,7 +3,10 @@
 // #include <Urho3D/Core/Variant.h>
 #include <Urho3D/Scene/Component.h>
 
+#include <memory>
+
 class JoltDebugRenderer;
+class JoltContactListener;
 
 namespace Urho3D {
 class VertexBuffer;
@@ -11,7 +14,8 @@ class VertexBuffer;
 
 namespace JPH {
 class TempAllocatorImpl;
-class JobSystemThreadPool;
+class JobSystemSingleThreaded;
+// class JobSystemThreadPool;
 class PhysicsSystem;
 } // namespace JPH
 
@@ -39,11 +43,17 @@ private:
     // void HandleEndViewUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
     void HandleSceneSubsystemUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
 private:
+    // void PreUpdate(float timeStep);
+    // void PostUpdate(float timeStep, float overtime);
+    // void PreStep(float timeStep);
+    void PostStep(float timeStep);
     JPH::TempAllocatorImpl *tempAllocator_;
-    JPH::JobSystemThreadPool *threadPool_;
+    JPH::JobSystemSingleThreaded *threadPool_;
+    // JPH::JobSystemThreadPool *threadPool_;
     BPLayerInterfaceImpl *layerInterface_;
     ObjectVsBroadPhaseLayerFilterImpl *objectVsBroadPhaseLayerFilter_;
     ObjectLayerPairFilterImpl *objectLayerPairFilter_;
+    std::unique_ptr<JoltContactListener> contactListener_;
     JPH::PhysicsSystem *physicsSystem_;
     float accumulator_;
     float fixedTimeStep_;

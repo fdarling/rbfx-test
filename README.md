@@ -26,7 +26,7 @@ cd build
 cmake .. -DCMAKE_PREFIX_PATH=~/apps/rbfx/share -DCMAKE_BUILD_TYPE=Release
 cmake .. -DCMAKE_PREFIX_PATH=~/apps/rbfx/share\;~/apps/JPH -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
 #cmake .. -DCMAKE_PREFIX_PATH=~/apps/rbfx_debug/share -DCMAKE_BUILD_TYPE=Debug
-#cmake .. -DCMAKE_PREFIX_PATH=~/apps/rbfx_debyg/share\;~/apps/JPH_debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
+#cmake .. -DCMAKE_PREFIX_PATH=~/apps/rbfx_debug/share\;~/apps/JPH_debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
 cmake --build .
 ```
 

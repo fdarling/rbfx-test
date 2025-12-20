@@ -1,7 +1,10 @@
 #include "JoltPhysicsWorld.h"
+#include "JoltContactListener.h"
 #include "JoltDebugRenderer.h"
 #include "JoltRigidBody.h"
 #include "JoltPhysicsDefs.h"
+#include "JoltPhysicsEvents.h"
+#include "JoltPhysicsUtils.h"
 
 #include <Urho3D/Scene/SceneEvents.h>
 #include <Urho3D/RenderAPI/DrawCommandQueue.h>
@@ -12,7 +15,8 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/TempAllocator.h>
-#include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Core/JobSystemSingleThreaded.h>
+// #include <Jolt/Core/JobSystemThreadPool.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 
@@ -58,21 +62,6 @@ static const uint cNumBodyMutexes = 0;
 static const uint cMaxBodyPairs = 1024; // TODO increase to 65536
 static const uint cMaxContactConstraints = 1024; // TODO increase to 10240
 static const float URHO3D_JOLTPHYSICS_DEFAULT_TIME_STEP = 1.0f / 60.0f;
-
-// TODO consolidate this
-static Urho3D::Matrix4 JoltMat44ToUrhoMatrix4(const JPH::Mat44 &inMat)
-{
-    float rawMat[16];
-    inMat.StoreFloat4x4(reinterpret_cast<JPH::Float4*>(rawMat));
-    Urho3D::Matrix4 mat(rawMat);
-    mat = mat.Transpose();
-    return mat;
-}
-
-static Urho3D::Quaternion JoltQuatToUrhoQuaternion(const JPH::Quat &inQuat)
-{
-    return Urho3D::Quaternion(inQuat.GetW(), inQuat.GetX(), inQuat.GetY(), inQuat.GetZ());
-}
 
 class ObjectLayerPairFilterImpl : public JPH::ObjectLayerPairFilter
 {
@@ -167,10 +156,12 @@ JoltPhysicsWorld::JoltPhysicsWorld(Urho3D::Context *context) :
 {
     URHO3D_LOGINFO("JoltPhysicsWorld::JoltPhysicsWorld()");
     tempAllocator_ = new JPH::TempAllocatorImpl(URHO3D_JOLT_PHYSICS_DEFAULT_TEMP_ALLOCATION_SIZE);
-    threadPool_ = new JPH::JobSystemThreadPool(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, std::thread::hardware_concurrency() - 1);
+    threadPool_ = new JPH::JobSystemSingleThreaded(JPH::cMaxPhysicsJobs);
+    // threadPool_ = new JPH::JobSystemThreadPool(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, std::thread::hardware_concurrency() - 1);
     layerInterface_ = new BPLayerInterfaceImpl();
     objectVsBroadPhaseLayerFilter_ = new ObjectVsBroadPhaseLayerFilterImpl();
     objectLayerPairFilter_ = new ObjectLayerPairFilterImpl();
+    contactListener_ = std::make_unique<JoltContactListener>(this);
     physicsSystem_ = new JPH::PhysicsSystem();
     physicsSystem_->Init(cMaxBodies,
                          cNumBodyMutexes,
@@ -179,6 +170,7 @@ JoltPhysicsWorld::JoltPhysicsWorld(Urho3D::Context *context) :
                          *layerInterface_,
                          *objectVsBroadPhaseLayerFilter_,
                          *objectLayerPairFilter_);
+    physicsSystem_->SetContactListener(contactListener_.get());
 }
 
 JoltPhysicsWorld::~JoltPhysicsWorld()
@@ -229,6 +221,7 @@ void JoltPhysicsWorld::Update(float timeStep)
         {
             physicsSystem_->Update(fixedTimeStep_, 1, tempAllocator_, threadPool_);
             accumulator_ -= fixedTimeStep_;
+            PostStep(fixedTimeStep_);
         }
     }
 
@@ -277,7 +270,7 @@ void JoltPhysicsWorld::Update(float timeStep)
             Urho3D::Vector3 oldScale; // reused later
             Urho3D::Quaternion oldRot;
             oldTrans.Decompose(oldPos, oldRot, oldScale);
-            const Urho3D::Matrix3x4 newTransWithScale(JoltMat44ToUrhoMatrix4(joltTrans));
+            const Urho3D::Matrix3x4 newTransWithScale(ToMatrix4(joltTrans));
             Urho3D::Vector3 newPos;
             Urho3D::Vector3 newScale; // ignored, will always be identity!
             Urho3D::Quaternion newRot;
@@ -343,4 +336,14 @@ void JoltPhysicsWorld::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *s
 void JoltPhysicsWorld::HandleSceneSubsystemUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
 {
     Update(eventData[Urho3D::SceneSubsystemUpdate::P_TIMESTEP].GetFloat());
+}
+
+void JoltPhysicsWorld::PostStep(float timeStep)
+{
+    using namespace JoltPhysicsPostStep;
+    URHO3D_PROFILE("JoltPostStep");
+    Urho3D::VariantMap &eventData = GetEventDataMap();
+    eventData[P_WORLD] = this;
+    eventData[P_TIMESTEP] = timeStep;
+    SendEvent(E_JOLTPHYSICSPOSTSTEP, eventData);
 }

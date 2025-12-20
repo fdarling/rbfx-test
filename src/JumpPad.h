@@ -12,6 +12,8 @@ class StringHash;
 
 } // namespace Urho3D
 
+class JoltRigidBody;
+
 class JumpPad : public Urho3D::Object
 {
     URHO3D_OBJECT(JumpPad, Urho3D::Object);
@@ -20,6 +22,8 @@ public:
     ~JumpPad();
 protected:
     void HandleNodeCollision(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
+    void HandlePhysicsPostStep(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
 
     Urho3D::Node *node_;
+    ea::vector< Urho3D::WeakPtr<JoltRigidBody> > toLaunch_;
 };

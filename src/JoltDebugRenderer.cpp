@@ -1,4 +1,5 @@
 #include "JoltDebugRenderer.h"
+#include "JoltPhysicsUtils.h"
 #include "CreateMaterial.h"
 
 #include <Urho3D/Core/Context.h>
@@ -20,18 +21,6 @@
 static const unsigned MAX_LINES = 1000000;
 // Cap the amount of triangles to prevent crash.
 static const unsigned MAX_TRIANGLES = 100000;
-
-static Urho3D::Color JoltToUrhoColor(JPH::ColorArg inColor)
-{
-    static const float DIVISOR = 255.0;
-    return Urho3D::Color(static_cast<float>(inColor.r) / DIVISOR, static_cast<float>(inColor.g) / DIVISOR, static_cast<float>(inColor.b) / DIVISOR, static_cast<float>(inColor.a) / DIVISOR);
-}
-
-// TODO consolidate this
-static Urho3D::Vector3 JoltVec3ToUrhoVector3(const JPH::Vec3 &inVec)
-{
-    return Urho3D::Vector3(reinterpret_cast<const float*>(&inVec));
-}
 
 class JoltRenderBatch : public JPH::RefTargetVirtual
 {
@@ -297,7 +286,7 @@ void JoltDebugRenderer::DrawLine(JPH::RVec3Arg inFrom, JPH::RVec3Arg inTo, JPH::
 #endif // MASSIVE_LOGGING
     const Urho3D::Vector3 start(reinterpret_cast<const float*>(&inFrom)); // TODO JoltVec3ToUrhoVector3
     const Urho3D::Vector3 end(reinterpret_cast<const float*>(&inTo)); // TODO JoltVec3ToUrhoVector3
-    const Urho3D::Color color = JoltToUrhoColor(inColor);
+    const Urho3D::Color color = ToColor(inColor);
     AddLine(start, end, color.ToUInt());
 }
 
@@ -349,7 +338,7 @@ void JoltDebugRenderer::DrawGeometry(JPH::RMat44Arg inModelMatrix, const JPH::AA
     JoltRenderBatch * const batch = reinterpret_cast<JoltRenderBatch*>(lod.mTriangleBatch.GetPtr());
 
     // create Urho3D color
-    const Urho3D::Color color = JoltToUrhoColor(inModelColor);
+    const Urho3D::Color color = ToColor(inModelColor);
 
     // convert Urho3D color to uint32_t
     const uint32_t colorKey = color.ToUInt();

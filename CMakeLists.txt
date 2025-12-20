@@ -88,6 +88,7 @@ add_executable(${PROJECT_NAME}
     src/JoltPhysicsWorld.cpp
     src/JoltRigidBody.cpp
     src/JoltCollisionShape.cpp
+    src/JoltContactListener.cpp
     src/Player.cpp
     src/JumpPad.cpp
     src/Ladder.cpp
