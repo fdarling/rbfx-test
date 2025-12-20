@@ -29,11 +29,22 @@
 #include "SceneLoader.h"
 #include "Player.h"
 #include "Ball.h"
+#include "JoltDebugRenderer.h"
+#include "JoltPhysicsWorld.h"
+#include "JoltRigidBody.h"
+#include "JoltCollisionShape.h"
+#include "CreateMaterial.h"
 #include "globals.h"
+#include <cstring>  // for memcpy
+#include <iostream>  // for memcpy
 
 #include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
 #include <Bullet/BulletCollision/NarrowPhaseCollision/btManifoldPoint.h>
 #include <Bullet/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h> // for gContactProcessedCallback
+
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Body/BodyManager.h>
+#include <Jolt/Physics/PhysicsSystem.h>
 
 using namespace Urho3D;
 
@@ -80,12 +91,16 @@ public:
         Application(context),
         yaw_(0.0f),
         pitch_(0.0f),
-        cameraMode_(CameraMode::ThirdPerson),
+        cameraMode_(CameraMode::FreeLook),
         drawDebug_(false),
-        drawPhysicsDebug_(false),
+        drawPhysicsDebug_(true),
         shadowsEnabled_(true),
         ssaoEnabled_(true)
     {
+        JoltDebugRenderer::RegisterObject(context);
+        JoltPhysicsWorld::RegisterObject(context);
+        JoltRigidBody::RegisterObject(context);
+        JoltCollisionShape::RegisterObject(context);
     }
 
     virtual void Setup() override
@@ -105,6 +120,8 @@ public:
         // Create scene
         scene_ = new Scene(context_);
         octree_ = scene_->CreateComponent<Octree>();
+        joltDebugRenderer_ = scene_->CreateComponent<JoltDebugRenderer>();
+        joltPhysicsWorld_ = scene_->CreateComponent<JoltPhysicsWorld>();
         physicsWorld_ = scene_->CreateComponent<PhysicsWorld>();
         // physicsWorld_->SetNumIterations(20); // default is 10
         // physicsWorld_->SetMaxSubSteps(10); // default is 0 for unlimited
@@ -199,6 +216,7 @@ public:
         // Subscribe to events
         SubscribeToEvent(E_KEYDOWN, URHO3D_HANDLER(MyApp, HandleKeyDown));
         SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(MyApp, HandleUpdate));
+        SubscribeToEvent(E_POSTUPDATE, URHO3D_HANDLER(MyApp, HandlePostUpdate));
         SubscribeToEvent(E_MOUSEMOVE, URHO3D_HANDLER(MyApp, HandleMouseMove));
         SubscribeToEvent(E_POSTRENDERUPDATE, URHO3D_HANDLER(MyApp, HandlePostRenderUpdate));
     }
@@ -284,7 +302,7 @@ public:
         if (input->GetKeyPress(KEY_X))
             camera_->SetFillMode(camera_->GetFillMode() == FILL_WIREFRAME ? FILL_SOLID : FILL_WIREFRAME);
 
-        // toggle debug drawing
+        // toggle physics debug rendering
         if (input->GetKeyPress(KEY_C))
             drawPhysicsDebug_ = !drawPhysicsDebug_;
 
@@ -334,12 +352,20 @@ public:
         debugHud_->SetMode(DEBUGHUD_SHOW_ALL);
     }
 
+    void HandlePostUpdate(StringHash eventType, VariantMap &eventData)
+    {
+        if (drawPhysicsDebug_)
+        {
+            // physicsWorld_->DrawDebugGeometry(true);
+            JoltDebugRenderer * const joltDebugRenderer = scene_->GetComponent<JoltDebugRenderer>();
+            joltPhysicsWorld_->DrawDebugGeometry(joltDebugRenderer, false);
+        }
+    }
+
     void HandlePostRenderUpdate(StringHash eventType, VariantMap &eventData)
     {
-        if (drawDebug_)
-            GetSubsystem<Renderer>()->DrawDebugGeometry(false);
-        if (drawPhysicsDebug_)
-            physicsWorld_->DrawDebugGeometry(true);
+        // if (drawDebug_)
+            // GetSubsystem<Renderer>()->DrawDebugGeometry(false);
     }
 
     void HandleMouseMove(StringHash eventType, VariantMap &eventData)
@@ -384,6 +410,8 @@ protected:
     SharedPtr<Scene> scene_;
     SharedPtr<Node> cameraNode_;
     SharedPtr<DebugHud> debugHud_;
+    SharedPtr<JoltDebugRenderer> joltDebugRenderer_;
+    SharedPtr<JoltPhysicsWorld> joltPhysicsWorld_;
     SharedPtr<PhysicsWorld> physicsWorld_;
     SharedPtr<Octree> octree_;
     SharedPtr<Zone> zone_;

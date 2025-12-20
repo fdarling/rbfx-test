@@ -1,5 +1,8 @@
 #include "Player.h"
 #include "Ladder.h"
+#include "JoltPhysicsWorld.h"
+#include "JoltRigidBody.h"
+#include "JoltCollisionShape.h"
 #include "CreateMaterial.h"
 #include "CreatePrimitives.h"
 #include "globals.h"
@@ -8,28 +11,28 @@
 #include <Urho3D/Graphics/Material.h>
 #include <Urho3D/Graphics/Model.h>
 #include <Urho3D/Graphics/StaticModel.h>
-#include <Urho3D/Physics/PhysicsEvents.h>
-#include <Urho3D/Physics/PhysicsWorld.h>
-#include <Urho3D/Physics/RigidBody.h>
-#include <Urho3D/Physics/CollisionShape.h>
+// #include <Urho3D/Physics/PhysicsEvents.h>
+// #include <Urho3D/Physics/PhysicsWorld.h>
+// #include <Urho3D/Physics/RigidBody.h>
+// #include <Urho3D/Physics/CollisionShape.h>
 #include <Urho3D/Scene/Scene.h>
 
-#include <Bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
+// #include <Bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+// #include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
 
 using Urho3D::Time;
 using Urho3D::Node;
 using Urho3D::Vector3;
 using Urho3D::StaticModel;
-using Urho3D::RigidBody;
-using Urho3D::CollisionShape;
+// using Urho3D::RigidBody;
+// using Urho3D::CollisionShape;
 using Urho3D::BoundingBox;
 using Urho3D::Color;
 using Urho3D::Clamp;
 using Urho3D::Quaternion;
 using Urho3D::OUTSIDE;
-using Urho3D::E_NODECOLLISIONSTART;
-namespace NodeCollisionStart = Urho3D::NodeCollisionStart;
+// using Urho3D::E_NODECOLLISIONSTART;
+// namespace NodeCollisionStart = Urho3D::NodeCollisionStart;
 
 Urho3D::SharedPtr<Urho3D::Model> Player::cylinderModel_;
 
@@ -55,21 +58,26 @@ Player::Player(Urho3D::Scene *scene, const Urho3D::Vector3 &pos) :
     sm->SetCastShadows(true);
 
     // create physics body
-    RigidBody * const body = node_->CreateComponent<RigidBody>();
+    /*RigidBody * const body = node_->CreateComponent<RigidBody>();
     body->SetMass(PLAYER_MASS);
     body->SetFriction(0.8f);
     body->SetLinearDamping(0.2f);
     body->SetAngularDamping(0.2f);
-    body->SetAngularFactor(Vector3(0, 0, 0)); // prevent tipping over
+    body->SetAngularFactor(Vector3(0, 0, 0)); // prevent tipping over*/
+    JoltRigidBody * const body = node_->CreateComponent<JoltRigidBody>();
+    body->SetMotionType(JoltRigidBody::MotionType::Dynamic);
+    body->SetAllowedDOFs(JoltRigidBody::AllowedDOFs::TranslationX | JoltRigidBody::AllowedDOFs::TranslationY | JoltRigidBody::AllowedDOFs::TranslationZ);
 
     // create physics shape
-    CollisionShape * const shape = node_->CreateComponent<CollisionShape>();
+    /*CollisionShape * const shape = node_->CreateComponent<CollisionShape>();
     shape->SetCapsule(PLAYER_RADIUS*2.0, PLAYER_HEIGHT);
 
     btRigidBody * const bulletBody = body->GetBody();
     bulletBody->setUserIndex(PhysicsUserIndex::Player);
 
-    SubscribeToEvent(node_, E_NODECOLLISIONSTART, URHO3D_HANDLER(Player, HandleNodeCollisionStart));
+    SubscribeToEvent(node_, E_NODECOLLISIONSTART, URHO3D_HANDLER(Player, HandleNodeCollisionStart));*/
+    JoltCollisionShape * const shape = node_->CreateComponent<JoltCollisionShape>();
+    shape->SetCapsule(PLAYER_RADIUS*2.0, PLAYER_HEIGHT);
 }
 
 Player::~Player()
@@ -140,7 +148,8 @@ struct ContactCallback : public btCollisionWorld::ContactResultCallback
 
 void Player::Advance()
 {
-    RigidBody * const body = node_->GetComponent<RigidBody>();
+    // TODO
+    /*RigidBody * const body = node_->GetComponent<RigidBody>();
 
     // test if we are on the ground
     ContactCallback callback;
@@ -196,7 +205,7 @@ void Player::Advance()
         v.y_ = PLAYER_JUMP_VELOCITY;
         body->Activate();
         body->SetLinearVelocity(v);
-    }
+    }*/
 }
 
 void Player::SetWalkAndFlyDirections(const Urho3D::Vector3 &walkDir, const Urho3D::Vector3 &flyDir)
@@ -225,18 +234,22 @@ static const Vector3 HORIZONTAL_OVERLAP_TOLERANCE(OVERLAP_TOLERANCE, 0.0f, OVERL
 
 bool Player::IsAboveLadderVertically() const
 {
-    if (!ladder_)
+    // TODO
+    return false;
+    /*if (!ladder_)
         return false;
     CollisionShape * const playerShape = node_->GetComponent<CollisionShape>();
     CollisionShape * const ladderShape = ladder_->GetNode()->GetComponent<CollisionShape>();
     const BoundingBox playerBB = playerShape->GetWorldBoundingBox();
     const BoundingBox ladderBB = ladderShape->GetWorldBoundingBox();
-    return playerBB.min_.y_ + OVERLAP_TOLERANCE >= ladderBB.max_.y_;
+    return playerBB.min_.y_ + OVERLAP_TOLERANCE >= ladderBB.max_.y_;*/
 }
 
 bool Player::IsAboveLadderHorizontally() const
 {
-    if (!ladder_)
+    return false;
+    // TODO
+    /*if (!ladder_)
         return false;
     CollisionShape * const playerShape = node_->GetComponent<CollisionShape>();
     CollisionShape * const ladderShape = ladder_->GetNode()->GetComponent<CollisionShape>();
@@ -250,7 +263,7 @@ bool Player::IsAboveLadderHorizontally() const
     // grow ladder bounding box vertically by height of player
     ladderBB.max_.y_ += playerBB.Size().y_;
 
-    return ladderBB.IsInside(playerBB) != OUTSIDE;
+    return ladderBB.IsInside(playerBB) != OUTSIDE;*/
 }
 
 Urho3D::Vector3 Player::GetLadderNormal() const
@@ -260,7 +273,7 @@ Urho3D::Vector3 Player::GetLadderNormal() const
     return ladder_->GetNormalForPoint(node_->GetPosition());
 }
 
-void Player::HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
+/*void Player::HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
 {
     Node * const nodeB = static_cast<Node*>(eventData[NodeCollisionStart::P_OTHERNODE].GetPtr());
     RigidBody * const bodyB = static_cast<RigidBody*>(eventData[NodeCollisionStart::P_OTHERBODY].GetPtr());
@@ -272,7 +285,7 @@ void Player::HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::Vari
             GrabLadder(ladder);
         }
     }
-}
+}*/
 
 void Player::GrabLadder(Ladder *ladder)
 {
@@ -288,12 +301,13 @@ void Player::GrabLadder(Ladder *ladder)
     ladder_ = ladder;
 
     // access our physics body
-    RigidBody * const body = node_->GetComponent<RigidBody>();
+    // TODO
+    /*RigidBody * const body = node_->GetComponent<RigidBody>();
 
     // attach to the new ladder
     if (ladder)
         ladder->ConstrainNode(node_);
 
     // no gravity when on any ladder
-    body->SetUseGravity(!ladder);
+    body->SetUseGravity(!ladder);*/
 }

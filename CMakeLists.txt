@@ -84,6 +84,10 @@ add_executable(${PROJECT_NAME}
     src/CreatePrimitives.cpp
     src/SceneLoader.cpp
     src/KinematicRigidBody.cpp
+    src/JoltDebugRenderer.cpp
+    src/JoltPhysicsWorld.cpp
+    src/JoltRigidBody.cpp
+    src/JoltCollisionShape.cpp
     src/Player.cpp
     src/JumpPad.cpp
     src/Ladder.cpp
@@ -94,6 +98,7 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Urho3D
+    Jolt::Jolt
     ${ASSIMP_LIBRARIES}
     rbfx_test::pch
 )

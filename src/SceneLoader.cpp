@@ -9,8 +9,8 @@
 #include <Urho3D/Graphics/Geometry.h>
 #include <Urho3D/Graphics/Material.h>
 #include <Urho3D/Graphics/Technique.h>
-#include <Urho3D/Physics/RigidBody.h>
-#include <Urho3D/Physics/CollisionShape.h>
+// #include <Urho3D/Physics/RigidBody.h>
+// #include <Urho3D/Physics/CollisionShape.h>
 #include <Urho3D/UI/Text3D.h>
 #include <Urho3D/UI/Font.h>
 #include <Urho3D/IO/Log.h>
@@ -21,7 +21,9 @@
 #include <assimp/postprocess.h>
 
 #include "CreateMaterial.h"
-#include "KinematicRigidBody.h"
+// #include "KinematicRigidBody.h"
+#include "JoltRigidBody.h"
+#include "JoltCollisionShape.h"
 #include "JumpPad.h"
 #include "Ladder.h"
 #include "Elevator.h"
@@ -379,8 +381,8 @@ static void processAssimpNode(const aiNode * const ai_node, const aiScene * cons
         }
 
         // create physics body
-        RigidBody *body = nullptr;
-        const bool isElevator = strcmp(ai_node->mName.C_Str(), "Elevator") == 0;
+        JoltRigidBody *body = nullptr;
+        /*const bool isElevator = strcmp(ai_node->mName.C_Str(), "Elevator") == 0;
         if (isElevator)
         {
             // NOTE: we cannot use currentNode->CreateComponent<KinematicRigidBody>()
@@ -394,23 +396,29 @@ static void processAssimpNode(const aiNode * const ai_node, const aiScene * cons
             currentNode->AddComponent(body, 0, Urho3D::REPLICATED);
 #endif
         }
-        else
-            body = currentNode->CreateComponent<RigidBody>();
-        body->SetMass(rigidBodyMass); // defaults to 0.0 which means a static body
+        else*/
+            body = currentNode->CreateComponent<JoltRigidBody>();
+        body->SetMotionType((rigidBodyMass == 0.0f) ? JoltRigidBody::MotionType::Static : JoltRigidBody::MotionType::Dynamic); // TODO breaks currently
+        // body->SetMass(rigidBodyMass); // defaults to 0.0 which means a static body
 
         // create physics shape
-        CollisionShape * const shape = currentNode->CreateComponent<CollisionShape>();
-        if (rigidBodyMass == 0.0f && !isElevator)
+        /*CollisionShape * const shape = currentNode->CreateComponent<CollisionShape>();
+        if (rigidBodyMass == 0.0f)// && !isElevator)
             shape->SetTriangleMesh(model); // for static bodies, we can use non-convex geometry
         // else if (isElevator)
             // shape->SetBox(Vector3(2, 2, 2)); // HACK to test if using a primitive shape improved tunneling behavior
         else
             shape->SetConvexHull(model); // for dynamic bodies, the geometry must be convex!
-        shape->SetMargin(0.001);
+        shape->SetMargin(0.001);*/
+        JoltCollisionShape * const shape = currentNode->CreateComponent<JoltCollisionShape>();
+        if (rigidBodyMass == 0.0f)// && !isElevator)
+            shape->SetTriangleMesh(model); // for static bodies, we can use non-convex geometry
+        else
+            shape->SetConvexHull(model); // for dynamic bodies, the geometry must be convex!
     }
 
     // check for custom game object type
-    if (const aiMetadata * const metadata = ai_node->mMetaData)
+    /*if (const aiMetadata * const metadata = ai_node->mMetaData)
     {
         for (unsigned int i = 0; i < metadata->mNumProperties; ++i)
         {
@@ -436,7 +444,7 @@ static void processAssimpNode(const aiNode * const ai_node, const aiScene * cons
                 }
             }
         }
-    }
+    }*/
 
     AddText3DLabel(currentNode, ai_node->mName.C_Str());
 

@@ -30,3 +30,20 @@ Urho3D::SharedPtr<Urho3D::Material> CreateMaterial(Urho3D::Context *context, con
     mat->SetShadowCullMode(CULL_CW);
     return mat;
 }
+
+Urho3D::SharedPtr<Urho3D::Material> CreateWireframeMaterial(Urho3D::Context *context, const Urho3D::Color &color)
+{
+    ResourceCache * const cache = context->GetSubsystem<ResourceCache>();
+    SharedPtr<Material> mat(new Material(context));
+    // mat->SetTechnique(0, cache->GetResource<Technique>("Techniques/UnlitOpaque.xml"));
+    mat->SetTechnique(0, cache->GetResource<Technique>("Techniques/NoTextureUnlit.xml"));
+#ifdef USING_RBFX
+    mat->SetShaderParameter(Material_MatDiffColor, color);
+#else // USING_RBFX
+    mat->SetShaderParameter("MatDiffColor", color);
+#endif // USING_RBFX
+    mat->SetCullMode(Urho3D::CULL_NONE);        // No culling so wires are visible from any angle
+    mat->SetFillMode(Urho3D::FILL_WIREFRAME);   // Wireframe rendering
+    mat->SetLineAntiAlias(true);         // Smooth lines
+    return mat;
+}

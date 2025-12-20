@@ -12,3 +12,4 @@ class Color;
 } // namespace Urho3D
 
 Urho3D::SharedPtr<Urho3D::Material> CreateMaterial(Urho3D::Context *context, const Urho3D::Color &color);
+Urho3D::SharedPtr<Urho3D::Material> CreateWireframeMaterial(Urho3D::Context *context, const Urho3D::Color &color);
