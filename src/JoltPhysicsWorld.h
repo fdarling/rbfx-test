@@ -43,9 +43,9 @@ private:
     // void HandleEndViewUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
     void HandleSceneSubsystemUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
 private:
-    // void PreUpdate(float timeStep);
-    // void PostUpdate(float timeStep, float overtime);
-    // void PreStep(float timeStep);
+    void PreUpdate(float timeStep);
+    void PostUpdate(float timeStep, float overtime);
+    void PreStep(float timeStep);
     void PostStep(float timeStep);
     JPH::TempAllocatorImpl *tempAllocator_;
     JPH::JobSystemSingleThreaded *threadPool_;
@@ -57,6 +57,7 @@ private:
     JPH::PhysicsSystem *physicsSystem_;
     float accumulator_;
     float fixedTimeStep_;
+    int simulatedSteps_;
     // TODO MyBodyActivationListener
     // TODO MyContactListener
 };

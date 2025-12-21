@@ -152,7 +152,8 @@ JoltPhysicsWorld::JoltPhysicsWorld(Urho3D::Context *context) :
     objectLayerPairFilter_(nullptr),
     physicsSystem_(nullptr),
     accumulator_(0.0),
-    fixedTimeStep_(URHO3D_JOLTPHYSICS_DEFAULT_TIME_STEP)
+    fixedTimeStep_(URHO3D_JOLTPHYSICS_DEFAULT_TIME_STEP),
+    simulatedSteps_(0)
 {
     URHO3D_LOGINFO("JoltPhysicsWorld::JoltPhysicsWorld()");
     tempAllocator_ = new JPH::TempAllocatorImpl(URHO3D_JOLT_PHYSICS_DEFAULT_TEMP_ALLOCATION_SIZE);
@@ -209,20 +210,24 @@ void JoltPhysicsWorld::Update(float timeStep)
     // determine how many cycles we are committing to simulating
     accumulator_ += timeStep;
     const int cCollisionSteps = accumulator_ / fixedTimeStep_;
-    if (!cCollisionSteps)
+    if (!cCollisionSteps) // TODO should we inhibit PreUpdate/PostUpdate when there aren't any steps being simulated?
         return;
     // const float simulatedTime = static_cast<float>(cCollisionSteps)*fixedTimeStep_;
 
-    // actually simulate. NOTE: in order to have per-substep callbacks, we
-    // cannot have Jolt perform more that one substep per function call
     {
         URHO3D_PROFILE("JoltUpdateSystem");
+        PreUpdate(fixedTimeStep_);
         for (int step = 0; step < cCollisionSteps; step++)
         {
+            PreStep(fixedTimeStep_);
+            // actually simulate. NOTE: in order to have per-substep callbacks, we
+            // cannot have Jolt perform more that one substep per function call
             physicsSystem_->Update(fixedTimeStep_, 1, tempAllocator_, threadPool_);
             accumulator_ -= fixedTimeStep_;
+            simulatedSteps_++;
             PostStep(fixedTimeStep_);
         }
+        PostUpdate(fixedTimeStep_, simulatedSteps_*fixedTimeStep_ + accumulator_);
     }
 
     // TODO interpolation!
@@ -307,7 +312,9 @@ void JoltPhysicsWorld::DrawDebugGeometry(JoltDebugRenderer *debug, bool depthTes
 
 void JoltPhysicsWorld::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scene)
 {
+#ifdef MASSIVE_LOGGING
     URHO3D_LOGINFO("JoltPhysicsWorld::OnSceneSet() scene = {}, GetScene() = {}", (void*)scene, (void*)GetScene());
+#endif // MASSIVE_LOGGING
     // Subscribe to the scene subsystem update, which will trigger the physics simulation step
     if (scene)
     {
@@ -336,6 +343,37 @@ void JoltPhysicsWorld::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *s
 void JoltPhysicsWorld::HandleSceneSubsystemUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
 {
     Update(eventData[Urho3D::SceneSubsystemUpdate::P_TIMESTEP].GetFloat());
+}
+
+void JoltPhysicsWorld::PreUpdate(float timeStep)
+{
+    using namespace JoltPhysicsPreUpdate;
+    URHO3D_PROFILE("JoltPreUpdate");
+    Urho3D::VariantMap &eventData = GetEventDataMap();
+    eventData[P_WORLD] = this;
+    eventData[P_TIMESTEP] = timeStep;
+    SendEvent(E_JOLTPHYSICSPREUPDATE, eventData);
+}
+
+void JoltPhysicsWorld::PostUpdate(float timeStep, float overtime)
+{
+    using namespace JoltPhysicsPostUpdate;
+    URHO3D_PROFILE("JoltPostUpdate");
+    Urho3D::VariantMap &eventData = GetEventDataMap();
+    eventData[P_WORLD] = this;
+    eventData[P_TIMESTEP] = timeStep;
+    eventData[P_OVERTIME] = overtime;
+    SendEvent(E_JOLTPHYSICSPOSTUPDATE, eventData);
+}
+
+void JoltPhysicsWorld::PreStep(float timeStep)
+{
+    using namespace JoltPhysicsPreStep;
+    URHO3D_PROFILE("JoltPreStep");
+    Urho3D::VariantMap &eventData = GetEventDataMap();
+    eventData[P_WORLD] = this;
+    eventData[P_TIMESTEP] = timeStep;
+    SendEvent(E_JOLTPHYSICSPRESTEP, eventData);
 }
 
 void JoltPhysicsWorld::PostStep(float timeStep)

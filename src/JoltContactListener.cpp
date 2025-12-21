@@ -6,13 +6,13 @@
 // #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/Body.h>
 
-#include <Urho3D/Core/Thread.h>
+// #include <Urho3D/Core/Thread.h>
 
 JoltContactListener::JoltContactListener(JoltPhysicsWorld *world) :
     physicsWorld_(world)
 {
-    const ThreadID current_id = Urho3D::Thread::GetCurrentThreadID();
-    URHO3D_LOGINFO("JoltContactListener::JoltContactListener() is running on thread ID: " + ea::to_string(current_id) + ", main?: " + (Urho3D::Thread::IsMainThread() ? "yes" : "no"));
+    // const ThreadID current_id = Urho3D::Thread::GetCurrentThreadID();
+    // URHO3D_LOGINFO("JoltContactListener::JoltContactListener() is running on thread ID: " + ea::to_string(current_id) + ", main?: " + (Urho3D::Thread::IsMainThread() ? "yes" : "no"));
 }
 
 JoltContactListener::~JoltContactListener()
@@ -38,15 +38,15 @@ void JoltContactListener::OnContactAdded(const JPH::Body &inBody1, const JPH::Bo
     // eventData[P_BODYA] = rigidBodyA;
     // eventData[P_BODYB] = rigidBodyB;
     // SendEvent(E_JOLTNODECOLLISIONSTART, eventData);
-    URHO3D_LOGINFO("JoltContactListener::OnContactAdded() nodeA = {}, nodeB = {}", (void*)nodeA, (void*)nodeB);
+    // URHO3D_LOGINFO("JoltContactListener::OnContactAdded() nodeA = {}, nodeB = {}", (void*)nodeA, (void*)nodeB);
     Urho3D::VariantMap &eventData = physicsWorld_->GetEventDataMap();
-    const ThreadID current_id = Urho3D::Thread::GetCurrentThreadID();
+    // const ThreadID current_id = Urho3D::Thread::GetCurrentThreadID();
     if (nodeA)
     {
         eventData[P_BODY] = rigidBodyA;
         eventData[P_OTHERNODE] = nodeB;
         eventData[P_OTHERBODY] = rigidBodyB;
-        URHO3D_LOGINFO("This function (OnContactAdded, nodeA portion) is running on thread ID: " + ea::to_string(current_id) + ", main?: " + (Urho3D::Thread::IsMainThread() ? "yes" : "no"));
+        // URHO3D_LOGINFO("This function (OnContactAdded, nodeA portion) is running on thread ID: " + ea::to_string(current_id) + ", main?: " + (Urho3D::Thread::IsMainThread() ? "yes" : "no"));
         nodeA->SendEvent(E_JOLTNODECOLLISIONSTART, eventData);
     }
     if (nodeB)
@@ -54,7 +54,7 @@ void JoltContactListener::OnContactAdded(const JPH::Body &inBody1, const JPH::Bo
         eventData[P_BODY] = rigidBodyB;
         eventData[P_OTHERNODE] = nodeA;
         eventData[P_OTHERBODY] = rigidBodyA;
-        URHO3D_LOGINFO("This function (OnContactAdded, nodeB portion) is running on thread ID: " + ea::to_string(current_id) + ", main?: " + (Urho3D::Thread::IsMainThread() ? "yes" : "no"));
+        // URHO3D_LOGINFO("This function (OnContactAdded, nodeB portion) is running on thread ID: " + ea::to_string(current_id) + ", main?: " + (Urho3D::Thread::IsMainThread() ? "yes" : "no"));
         nodeB->SendEvent(E_JOLTNODECOLLISIONSTART, eventData);
     }
 }
@@ -77,7 +77,7 @@ void JoltContactListener::OnContactPersisted(const JPH::Body &inBody1, const JPH
         eventData[P_BODY] = rigidBodyA;
         eventData[P_OTHERNODE] = nodeB;
         eventData[P_OTHERBODY] = rigidBodyB;
-        nodeA->SendEvent(E_JOLTNODECOLLISIONSTART, eventData);
+        nodeA->SendEvent(E_JOLTNODECOLLISION, eventData);
     }
     if (nodeB)
     {

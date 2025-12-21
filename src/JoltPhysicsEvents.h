@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Core/Object.h"
+#include <Urho3D/Core/Object.h>
 
 /// Physics world is about to be updated. There may be zero, one, or more physics steps coming.
 URHO3D_EVENT(E_JOLTPHYSICSPREUPDATE, JoltPhysicsPreUpdate)

@@ -30,12 +30,16 @@ public:
     JPH::BodyID GetBodyID() {return joltBodyId_;}
     JPH::BodyID GetBodyID() const {return joltBodyId_;}
 
+    void MoveKinematic(const Urho3D::Vector3 &pos, const Urho3D::Quaternion &rot, float deltaTime);
+
+    Urho3D::Vector3 GetAngularVelocity() const;
     Urho3D::Vector3 GetLinearVelocity() const;
 
     void SetAllowedDOFs(AllowedDOFs dofs);
     void SetFriction(float friction);
     void SetMotionType(MotionType motionType);
     void SetMotionQuality(MotionQuality motionQuality);
+    void SetAngularVelocity(const Urho3D::Vector3 &velocity);
     void SetLinearVelocity(const Urho3D::Vector3 &velocity);
     void SetRestitution(float restitution);
 protected:

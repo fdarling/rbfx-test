@@ -16,14 +16,14 @@
 JoltRigidBody::JoltRigidBody(Urho3D::Context *context) :
     Component(context)
 {
-    URHO3D_LOGINFO("JoltRigidBody::JoltRigidBody()");
+    // URHO3D_LOGINFO("JoltRigidBody::JoltRigidBody()");
     joltBodySettings_.mAllowDynamicOrKinematic = true;
     joltBodySettings_.mUserData = reinterpret_cast<JPH::uint64>(this);
 }
 
 JoltRigidBody::~JoltRigidBody()
 {
-    URHO3D_LOGINFO("JoltRigidBody::~JoltRigidBody()");
+    // URHO3D_LOGINFO("JoltRigidBody::~JoltRigidBody()");
     ReleaseBody();
 }
 
@@ -34,7 +34,7 @@ void JoltRigidBody::RegisterObject(Urho3D::Context *context)
 
 void JoltRigidBody::ReleaseBody()
 {
-    URHO3D_LOGINFO("JoltRigidBody::ReleaseBody()");
+    // URHO3D_LOGINFO("JoltRigidBody::ReleaseBody()");
     if (joltPhysicsWorld_ && !joltBodyId_.IsInvalid())
     {
         RemoveBodyFromWorld();
@@ -43,6 +43,21 @@ void JoltRigidBody::ReleaseBody()
         body_interface.DestroyBody(joltBodyId_);
         joltBodyId_ = JPH::BodyID();
     }
+}
+
+void JoltRigidBody::MoveKinematic(const Urho3D::Vector3 &pos, const Urho3D::Quaternion &rot, float deltaTime)
+{
+    // TODO defer the movement until we have the ability to apply it!
+
+    // make sure we have a body to update
+    if (!joltPhysicsWorld_ || joltBodyId_.IsInvalid())
+        return;
+
+    // get the body interface
+    JPH::BodyInterface &body_interface = joltPhysicsWorld_->GetPhysicsSystem().GetBodyInterface();
+
+    // actually move the body
+    body_interface.MoveKinematic(joltBodyId_, ToJoltVec3(pos), ToJoltQuat(rot), deltaTime);
 }
 
 template <typename ValueType, typename BodyInterfaceType>
@@ -93,6 +108,11 @@ void JoltRigidBody::BodyAttributeSetter(
         joltBodySettings_.*SettingPtr, // second method argument
         std::forward<RestArgs>(restArgs)... // any other arguments
     );
+}
+
+Urho3D::Vector3 JoltRigidBody::GetAngularVelocity() const
+{
+    return ToVector3(BodyAttributeGetter(&JPH::BodyInterface::GetAngularVelocity));
 }
 
 Urho3D::Vector3 JoltRigidBody::GetLinearVelocity() const
@@ -163,6 +183,15 @@ void JoltRigidBody::SetMotionQuality(MotionQuality motionQuality)
     );
 }
 
+void JoltRigidBody::SetAngularVelocity(const Urho3D::Vector3 &velocity)
+{
+    // TODO stash velocity for deferred application
+    if (!joltPhysicsWorld_ || joltBodyId_.IsInvalid())
+        return;
+    JPH::BodyInterface &body_interface = joltPhysicsWorld_->GetPhysicsSystem().GetBodyInterface();
+    body_interface.SetAngularVelocity(joltBodyId_, ToJoltVec3(velocity));
+}
+
 void JoltRigidBody::SetLinearVelocity(const Urho3D::Vector3 &velocity)
 {
     // TODO stash velocity for deferred application
@@ -183,7 +212,7 @@ void JoltRigidBody::SetRestitution(float restitution)
 
 void JoltRigidBody::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scene)
 {
-    URHO3D_LOGINFO("JoltRigidBody::OnSceneSet({}, {})", (void*)previousScene, (void*)scene);
+    // URHO3D_LOGINFO("JoltRigidBody::OnSceneSet({}, {})", (void*)previousScene, (void*)scene);
     if (scene)
     {
         Urho3D::Node * const node = GetNode();
@@ -229,7 +258,7 @@ void JoltRigidBody::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scen
 
 void JoltRigidBody::AddBodyToWorld()
 {
-    URHO3D_LOGINFO("JoltRigidBody::AddBodyToWorld()");
+    // URHO3D_LOGINFO("JoltRigidBody::AddBodyToWorld()");
     if (!joltPhysicsWorld_)
         return;
     if (joltBodyId_.IsInvalid())
@@ -285,7 +314,7 @@ void JoltRigidBody::AddBodyToWorld()
 
 void JoltRigidBody::RemoveBodyFromWorld()
 {
-    URHO3D_LOGINFO("JoltRigidBody::RemoveBodyFromWorld()");
+    // URHO3D_LOGINFO("JoltRigidBody::RemoveBodyFromWorld()");
     if (!joltPhysicsWorld_)
         return;
     if (joltBodyId_.IsInvalid()) // && inWorld_

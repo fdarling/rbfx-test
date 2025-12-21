@@ -29,7 +29,7 @@ public:
     Elevator(Urho3D::Node *node);
     ~Elevator();
 protected:
-    void HandlePostUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
+    // void HandlePostUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
     void HandlePhysicsPreStep(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
     void HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
 
@@ -37,7 +37,9 @@ protected:
     State _state;
     float _accumulator;
     float _cooldown;
-    btTransform _oldTransform;
-    btTransform _startTrans;
-    btTransform _endTrans;
+    // btTransform _oldTransform;
+    // btTransform _startTrans;
+    // btTransform _endTrans;
+    Urho3D::Matrix3x4 _startTrans;
+    Urho3D::Matrix3x4 _endTrans;
 };

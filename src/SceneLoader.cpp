@@ -438,10 +438,10 @@ static void processAssimpNode(const aiNode * const ai_node, const aiScene * cons
                 // {
                     // Ladder * const ladder = new Ladder(currentNode);
                 // }
-                // else if (strcmp(type, "Elevator") == 0)
-                // {
-                    // Elevator * const elevator = new Elevator(currentNode);
-                // }
+                else if (strcmp(type, "Elevator") == 0)
+                {
+                    Elevator * const elevator = new Elevator(currentNode);
+                }
             }
         }
     }

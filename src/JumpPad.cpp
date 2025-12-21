@@ -42,7 +42,7 @@ JumpPad::~JumpPad()
 
 void JumpPad::HandleNodeCollision(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
 {
-    URHO3D_LOGINFO("JumpPad::HandleNodeCollision()");
+    // URHO3D_LOGINFO("JumpPad::HandleNodeCollision()");
     /*Node * const nodeB = static_cast<Node*>(eventData[NodeCollisionStart::P_OTHERNODE].GetPtr());
     RigidBody * const bodyB = static_cast<RigidBody*>(eventData[NodeCollisionStart::P_OTHERBODY].GetPtr());
     if (bodyB)

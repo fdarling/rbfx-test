@@ -168,12 +168,12 @@ JoltCollisionShape::JoltCollisionShape(Urho3D::Context *context) :
     rotation_(Urho3D::Quaternion::IDENTITY),
     recreateShape_(true)
 {
-    URHO3D_LOGINFO("JoltCollisionShape::JoltCollisionShape()");
+    // URHO3D_LOGINFO("JoltCollisionShape::JoltCollisionShape()");
 }
 
 JoltCollisionShape::~JoltCollisionShape()
 {
-    URHO3D_LOGINFO("JoltCollisionShape::~JoltCollisionShape()");
+    // URHO3D_LOGINFO("JoltCollisionShape::~JoltCollisionShape()");
 }
 
 void JoltCollisionShape::RegisterObject(Urho3D::Context *context)
@@ -183,7 +183,7 @@ void JoltCollisionShape::RegisterObject(Urho3D::Context *context)
 
 void JoltCollisionShape::ApplyAttributes()
 {
-    URHO3D_LOGINFO("JoltCollisionShape::ApplyAttributes()");
+    // URHO3D_LOGINFO("JoltCollisionShape::ApplyAttributes()");
     if (recreateShape_)
     {
         UpdateShape();
@@ -220,7 +220,7 @@ void JoltCollisionShape::SetSphere(float diameter, const Urho3D::Vector3 &positi
 
 void JoltCollisionShape::SetTriangleMesh(Urho3D::Model *model, unsigned lodLevel, const Urho3D::Vector3 &scale, const Urho3D::Vector3 &position, const Urho3D::Quaternion &rotation)
 {
-    URHO3D_LOGINFO("JoltCollisionShape::SetTriangleMesh()");
+    // URHO3D_LOGINFO("JoltCollisionShape::SetTriangleMesh()");
     shapeData_ = ModelShapeData{
         .model_{model},
         .lodLevel_ = lodLevel,
@@ -236,7 +236,7 @@ void JoltCollisionShape::SetTriangleMesh(Urho3D::Model *model, unsigned lodLevel
 
 void JoltCollisionShape::SetConvexHull(Urho3D::Model *model, unsigned lodLevel, const Urho3D::Vector3 &scale, const Urho3D::Vector3 &position, const Urho3D::Quaternion &rotation)
 {
-    URHO3D_LOGINFO("JoltCollisionShape::SetConvexHull()");
+    // URHO3D_LOGINFO("JoltCollisionShape::SetConvexHull()");
     shapeData_ = ModelShapeData{
         .model_{model},
         .lodLevel_ = lodLevel,
@@ -252,7 +252,7 @@ void JoltCollisionShape::SetConvexHull(Urho3D::Model *model, unsigned lodLevel, 
 
 void JoltCollisionShape::NotifyRigidBody()
 {
-    URHO3D_LOGINFO("JoltCollisionShape::NotifyRigidBody()");
+    // URHO3D_LOGINFO("JoltCollisionShape::NotifyRigidBody()");
 
     // sanity check, this shouldn't ever be the case! it means not even an EmptyShape was able to be created...
     if (!joltUnscaledShape_)
@@ -289,7 +289,7 @@ void JoltCollisionShape::NotifyRigidBody()
 
     // use the body interface to actually set the rigid body's shape
     body_interface.SetShape(bodyID, joltScaledShape_ ? joltScaledShape_ : joltUnscaledShape_, false, JPH::EActivation::Activate);
-    URHO3D_LOGINFO("JoltCollisionShape::NotifyRigidBody(): called SetShape()!");
+    // URHO3D_LOGINFO("JoltCollisionShape::NotifyRigidBody(): called SetShape()!");
     // Remove the shape first to ensure it is not added twice
     /*compound->removeChildShape(shape_.get());
 
@@ -317,7 +317,7 @@ void JoltCollisionShape::NotifyRigidBody()
 
 void JoltCollisionShape::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scene)
 {
-    URHO3D_LOGINFO("JoltCollisionShape::OnSceneSet()");
+    // URHO3D_LOGINFO("JoltCollisionShape::OnSceneSet()");
     if (scene)
     {
         NotifyRigidBody();
@@ -326,7 +326,7 @@ void JoltCollisionShape::OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene 
 
 void JoltCollisionShape::UpdateShape()
 {
-    URHO3D_LOGINFO("JoltCollisionShape::UpdateShape()");
+    // URHO3D_LOGINFO("JoltCollisionShape::UpdateShape()");
     /*if (!physicsWorld_)
     {
         retryCreation_ = true;
@@ -362,7 +362,7 @@ void JoltCollisionShape::UpdateShape()
     // shapes.push_back(new JPH::BoxShape(JPH::Vec3(1.0, 1.0, 1.0))); // HACK for testing
     if (shapes.size() == 0)
     {
-        URHO3D_LOGINFO("JoltCollisionShape::UpdateShape(): (as empty shape)");
+        // URHO3D_LOGINFO("JoltCollisionShape::UpdateShape(): (as empty shape)");
         JPH::EmptyShapeSettings emptyShapeSettings;
         JPH::Shape::ShapeResult shapeResult = emptyShapeSettings.Create();
         if (shapeResult.HasError())
@@ -380,13 +380,13 @@ void JoltCollisionShape::UpdateShape()
     }
     else if (shapes.size() == 1)
     {
-        URHO3D_LOGINFO("JoltCollisionShape::UpdateShape(): (as single shape)");
+        // URHO3D_LOGINFO("JoltCollisionShape::UpdateShape(): (as single shape)");
         joltUnscaledShape_ = shapes[0];
         joltScaledShape_ = nullptr;
     }
     else if (shapes.size() >= 2)
     {
-        URHO3D_LOGINFO("JoltCollisionShape::UpdateShape(): (as compound shape)");
+        // URHO3D_LOGINFO("JoltCollisionShape::UpdateShape(): (as compound shape)");
         JPH::StaticCompoundShapeSettings compoundSettings;
         for (std::size_t i = 0; i < shapes.size(); i++)
         {
