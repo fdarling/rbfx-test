@@ -9,8 +9,6 @@
 #include <Urho3D/Graphics/Geometry.h>
 #include <Urho3D/Graphics/Material.h>
 #include <Urho3D/Graphics/Technique.h>
-// #include <Urho3D/Physics/RigidBody.h>
-// #include <Urho3D/Physics/CollisionShape.h>
 #include <Urho3D/UI/Text3D.h>
 #include <Urho3D/UI/Font.h>
 #include <Urho3D/IO/Log.h>
@@ -21,7 +19,6 @@
 #include <assimp/postprocess.h>
 
 #include "CreateMaterial.h"
-// #include "KinematicRigidBody.h"
 #include "JoltRigidBody.h"
 #include "JoltCollisionShape.h"
 #include "JumpPad.h"

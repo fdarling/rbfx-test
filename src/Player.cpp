@@ -15,6 +15,7 @@
 #include <Urho3D/Graphics/StaticModel.h>
 #include <Urho3D/Scene/Scene.h>
 
+#include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
@@ -45,7 +46,7 @@ Player::Player(Urho3D::Scene *scene, const Urho3D::Vector3 &pos) :
 
     // possibly create and cache the model
     if (!cylinderModel_)
-        cylinderModel_ = CreateCapsuleModel(scene->GetContext(), PLAYER_RADIUS, PLAYER_HEIGHT); // TODO support multiple contexts!
+        cylinderModel_ = CreateCapsuleModel(scene->GetContext(), PLAYER_RADIUS, PLAYER_HEIGHT - PLAYER_RADIUS*2.0); // TODO support multiple contexts!
 
     // use the model
     StaticModel * const sm = node_->CreateComponent<StaticModel>();
@@ -54,20 +55,20 @@ Player::Player(Urho3D::Scene *scene, const Urho3D::Vector3 &pos) :
     sm->SetCastShadows(true);
 
     // create physics body
-    /*RigidBody * const body = node_->CreateComponent<RigidBody>();
-    body->SetMass(PLAYER_MASS);
-    body->SetFriction(0.8f);
-    body->SetLinearDamping(0.2f);
-    body->SetAngularDamping(0.2f);
-    body->SetAngularFactor(Vector3(0, 0, 0)); // prevent tipping over*/
     JoltRigidBody * const body = node_->CreateComponent<JoltRigidBody>();
     body->SetMotionType(JoltRigidBody::MotionType::Dynamic);
     body->SetAllowedDOFs(JoltRigidBody::AllowedDOFs::TranslationX | JoltRigidBody::AllowedDOFs::TranslationY | JoltRigidBody::AllowedDOFs::TranslationZ);
 
     // create physics shape
     JoltCollisionShape * const shape = node_->CreateComponent<JoltCollisionShape>();
-    shape->SetCapsule(PLAYER_RADIUS*2.0, PLAYER_HEIGHT);
+    shape->SetCapsule(PLAYER_RADIUS*2.0, PLAYER_HEIGHT - PLAYER_RADIUS*2.0);
     SubscribeToEvent(node_, E_JOLTNODECOLLISIONSTART, URHO3D_HANDLER(Player, HandleNodeCollisionStart));
+
+    // TODO set mass, friction, etc.
+    // body->SetMass(PLAYER_MASS);
+    // body->SetFriction(0.8f);
+    // body->SetLinearDamping(0.2f);
+    // body->SetAngularDamping(0.2f);
 }
 
 Player::~Player()
@@ -117,12 +118,14 @@ static Vector3 adjustWalkDir(Player *player, const Vector3 &walkDir)
 
 void Player::Advance()
 {
+    // finally use the ladder (it was deferred in an event handler)
     if (ladderToGrab_)
     {
         Ladder * const ladder = ladderToGrab_;
         ladderToGrab_ = nullptr;
         GrabLadder(ladder);
     }
+
     // get the physics objects
     JoltRigidBody * const body = node_->GetComponent<JoltRigidBody>();
     JoltCollisionShape * const shape = node_->GetComponent<JoltCollisionShape>();
@@ -161,7 +164,12 @@ void Player::Advance()
             for (const JPH::CollideShapeResult &result : collector.mHits)
             {
                 const JPH::Vec3 normalDir = -result.mPenetrationAxis.Normalized();
-                // const JPH::BodyID otherBodyID = result.mBodyID2;
+                const JPH::BodyID otherBodyID = result.mBodyID2;
+                JoltRigidBody * const otherBody = reinterpret_cast<JoltRigidBody*>(body_interface.GetUserData(otherBodyID));
+                Urho3D::Node * const otherNode = otherBody->GetNode();
+                Ladder * const ladder = reinterpret_cast<Ladder*>(otherNode->GetVar("GameObjectPtr").GetVoidPtr());
+                if (ladder)
+                    continue;
                 if (normalDir.GetY() > 0.4 && result.mPenetrationDepth >= 0.0)
                 {
                     onGround = true;
@@ -250,25 +258,21 @@ static const Vector3 HORIZONTAL_OVERLAP_TOLERANCE(OVERLAP_TOLERANCE, 0.0f, OVERL
 
 bool Player::IsAboveLadderVertically() const
 {
-    // TODO
-    return false;
-    /*if (!ladder_)
+    if (!ladder_)
         return false;
-    CollisionShape * const playerShape = node_->GetComponent<CollisionShape>();
-    CollisionShape * const ladderShape = ladder_->GetNode()->GetComponent<CollisionShape>();
+    JoltCollisionShape * const playerShape = node_->GetComponent<JoltCollisionShape>();
+    JoltCollisionShape * const ladderShape = ladder_->GetNode()->GetComponent<JoltCollisionShape>();
     const BoundingBox playerBB = playerShape->GetWorldBoundingBox();
     const BoundingBox ladderBB = ladderShape->GetWorldBoundingBox();
-    return playerBB.min_.y_ + OVERLAP_TOLERANCE >= ladderBB.max_.y_;*/
+    return playerBB.min_.y_ + OVERLAP_TOLERANCE >= ladderBB.max_.y_;
 }
 
 bool Player::IsAboveLadderHorizontally() const
 {
-    return false;
-    // TODO
-    /*if (!ladder_)
+    if (!ladder_)
         return false;
-    CollisionShape * const playerShape = node_->GetComponent<CollisionShape>();
-    CollisionShape * const ladderShape = ladder_->GetNode()->GetComponent<CollisionShape>();
+    JoltCollisionShape * const playerShape = node_->GetComponent<JoltCollisionShape>();
+    JoltCollisionShape * const ladderShape = ladder_->GetNode()->GetComponent<JoltCollisionShape>();
     const BoundingBox playerBB = playerShape->GetWorldBoundingBox();
           BoundingBox ladderBB = ladderShape->GetWorldBoundingBox();
 
@@ -279,7 +283,7 @@ bool Player::IsAboveLadderHorizontally() const
     // grow ladder bounding box vertically by height of player
     ladderBB.max_.y_ += playerBB.Size().y_;
 
-    return ladderBB.IsInside(playerBB) != OUTSIDE;*/
+    return ladderBB.IsInside(playerBB) != OUTSIDE;
 }
 
 Urho3D::Vector3 Player::GetLadderNormal() const
@@ -291,19 +295,16 @@ Urho3D::Vector3 Player::GetLadderNormal() const
 
 void Player::HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
 {
-    // URHO3D_LOGINFO("Player::HandleNodeCollisionStart()");
     Node * const nodeB = static_cast<Node*>(eventData[JoltNodeCollisionStart::P_OTHERNODE].GetPtr());
     JoltRigidBody * const bodyB = static_cast<JoltRigidBody*>(eventData[JoltNodeCollisionStart::P_OTHERBODY].GetPtr());
     if (nodeB && bodyB)
     {
-        // if (bodyB->GetBody()->getUserIndex() == PhysicsUserIndex::Ladder)
+        // TODO identify the object type before assuming, right now only the Ladder sets GameObjectPtr...
+        Ladder * const ladder = reinterpret_cast<Ladder*>(nodeB->GetVar("GameObjectPtr").GetVoidPtr());
+        if (ladder)
         {
-            Ladder * const ladder = reinterpret_cast<Ladder*>(nodeB->GetVar("GameObjectPtr").GetVoidPtr());
-            if (ladder)
-            {
-                // URHO3D_LOGINFO("Player::HandleNodeCollisionStart() grabbing ladder!");
-                ladderToGrab_ = ladder;
-            }
+            // we are not allowed to modify things during this event, defer using the ladder until later
+            ladderToGrab_ = ladder;
         }
     }
 }

@@ -20,42 +20,6 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 
-// #include <Jolt/Jolt.h>
-// #include <Jolt/RegisterTypes.h>
-// #include <Jolt/Core/Factory.h>
-// #include <Jolt/Core/TempAllocator.h>
-// #include <Jolt/Core/JobSystemThreadPool.h>
-// #include <Jolt/Physics/PhysicsSystem.h>
-// #include <Jolt/Physics/Collision/Shape/BoxShape.h>
-// #include <Jolt/Physics/Collision/Shape/SphereShape.h>
-// #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
-// #include <Jolt/Physics/Body/BodyCreationSettings.h>
-// #include <Jolt/Physics/Body/Body.h>
-
-// constants
-constexpr float FLOOR_WIDTH = 25.0;
-constexpr float FLOOR_THICKNESS = 1.0;
-constexpr float ELEVATOR_THICKNESS = 0.25;
-constexpr float ELEVATOR_WIDTH = 6.0;
-constexpr float JUMP_PAD_THICKNESS = 0.25;
-constexpr float JUMP_PAD_WIDTH = 2.0;
-constexpr float STACKED_BOX_THICKNESS = 0.125;
-constexpr float STACKED_BOX_WIDTH = 2.0;
-constexpr float SPHERE_DIAMETER = 1.0;
-constexpr float BALL_DIAMETER = 0.5;
-constexpr float BALL_INITIAL_SPEED = 15.0;
-constexpr float ELEVATOR_TRAVEL_TIME = 4.0;
-constexpr float ELEVATOR_PAUSE_TIME = 3.0;
-constexpr float ELEVATOR_CYCLE_TIME = 2.0*ELEVATOR_TRAVEL_TIME + 2.0*ELEVATOR_PAUSE_TIME;
-constexpr float ELEVATOR_LOWER_Y = ELEVATOR_THICKNESS/2.0;
-constexpr float ELEVATOR_UPPER_Y = 22.0 - ELEVATOR_THICKNESS/2.0;
-constexpr float LADDER_HEIGHT = 10.0;
-constexpr float LADDER_WIDTH = 2.0;
-constexpr float BALLOON_DIAMETER = 1.0;
-constexpr float BALLOON_RADIUS = BALLOON_DIAMETER/2.0;
-constexpr float MOUSELOOK_SENSITIVITY = 0.002f;
-constexpr float WALK_SPEED = 20.0f;
-
 static const std::size_t URHO3D_JOLT_PHYSICS_DEFAULT_TEMP_ALLOCATION_SIZE = 10 * 1024 * 1024;
 static const uint cMaxBodies = 1024; // TODO increase to 65536
 static const uint cNumBodyMutexes = 0;
@@ -93,7 +57,7 @@ class BPLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface
 public:
     BPLayerInterfaceImpl()
     {
-        // Create a mapping table from object to broad phase layer
+        // create a mapping table from object to broad phase layer
         mObjectToBroadPhase[JoltPhysicsLayers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
         mObjectToBroadPhase[JoltPhysicsLayers::MOVING] = BroadPhaseLayers::MOVING;
     }

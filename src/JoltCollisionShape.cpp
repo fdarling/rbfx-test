@@ -251,6 +251,31 @@ void JoltCollisionShape::SetConvexHull(Urho3D::Model *model, unsigned lodLevel, 
     NotifyRigidBody();
 }
 
+Urho3D::BoundingBox JoltCollisionShape::GetWorldBoundingBox() const
+{
+    // TODO verify that we are applying offsets correctly, especially for center of mass!
+    JPH::Shape * const shape = joltScaledShape_ ? joltScaledShape_ : joltUnscaledShape_;
+    if (!shape || !node_)
+        return Urho3D::BoundingBox();
+
+    // use the rigid body's world transform if possible, as it may be different from the rendering transform
+    JoltRigidBody * const body = GetComponent<JoltRigidBody>();
+    const Urho3D::Matrix3x4 worldTransform = body ? Urho3D::Matrix3x4(body->GetPosition(), body->GetRotation(), node_->GetWorldScale()) : node_->GetWorldTransform();
+
+    // isolate the position / rotation, ignoring the scale (handled already by joltScaledShape_)
+    const Urho3D::Vector3 worldPosition(worldTransform * position_);
+    const Urho3D::Quaternion worldRotation(worldTransform.Rotation() * rotation_);
+
+    // get the world transform (for applying to the shared shape)
+    const JPH::Mat44 shapeWorldTransform = JPH::Mat44::sRotationTranslation(ToJoltQuat(worldRotation), ToJoltVec3(worldPosition));
+
+    // calculate Jolt bounding box
+    const JPH::AABox shapeBB = shape->GetWorldSpaceBounds(shapeWorldTransform, JPH::Vec3::sReplicate(1.0f));
+
+    // convert to Urho3D bounding box
+    return ToBoundingBox(shapeBB);
+}
+
 void JoltCollisionShape::NotifyRigidBody()
 {
     // URHO3D_LOGINFO("JoltCollisionShape::NotifyRigidBody()");
@@ -353,16 +378,13 @@ void JoltCollisionShape::UpdateShape()
     else if (std::holds_alternative<CapsuleShapeData>(shapeData_))
     {
         CapsuleShapeData &capsuleShapeData = std::get<CapsuleShapeData>(shapeData_);
-        // shapes.push_back(new JPH::CapsuleShape(capsuleShapeData.height_/2.0, capsuleShapeData.diameter_/2.0));
         shapes.push_back(new JPH::CapsuleShape(capsuleShapeData.height_/2.0, capsuleShapeData.diameter_/2.0));
     }
     else if (std::holds_alternative<SphereShapeData>(shapeData_))
     {
         SphereShapeData &sphereShapeData = std::get<SphereShapeData>(shapeData_);
         shapes.push_back(new JPH::SphereShape(sphereShapeData.diameter_/2.0));
-        // shapes.push_back(new JPH::SphereShape(sphereShapeData.diameter_/2.0*1.25)); // HACK make sphere bigger so we can see it outside of the graphical representation
     }
-    // shapes.push_back(new JPH::BoxShape(JPH::Vec3(1.0, 1.0, 1.0))); // HACK for testing
     if (shapes.size() == 0)
     {
         // URHO3D_LOGINFO("JoltCollisionShape::UpdateShape(): (as empty shape)");

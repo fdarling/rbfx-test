@@ -19,15 +19,14 @@ inline JPH::Vec3 ToJoltVec3(const Urho3D::Vector3 &inVec)
 
 inline JPH::Quat ToJoltQuat(const Urho3D::Quaternion &inQuat)
 {
-    // static const float MULTIPLIER = Urho3D::M_PI/180.0;
-    static const float MULTIPLIER = 1.0;
-    return JPH::Quat(inQuat.x_*MULTIPLIER, inQuat.y_*MULTIPLIER, inQuat.z_*MULTIPLIER, inQuat.w_*MULTIPLIER);
+    return JPH::Quat(inQuat.x_, inQuat.y_, inQuat.z_, inQuat.w_);
 }
 
 inline Urho3D::Color ToColor(JPH::ColorArg inColor)
 {
-    static const float DIVISOR = 255.0;
-    return Urho3D::Color(static_cast<float>(inColor.r) / DIVISOR, static_cast<float>(inColor.g) / DIVISOR, static_cast<float>(inColor.b) / DIVISOR, static_cast<float>(inColor.a) / DIVISOR);
+    static const float DIVISOR = 256.0;
+    static const float ADDEND = 0.5/DIVISOR;
+    return Urho3D::Color(static_cast<float>(inColor.r) / DIVISOR + ADDEND, static_cast<float>(inColor.g) / DIVISOR + ADDEND, static_cast<float>(inColor.b) / DIVISOR + ADDEND, static_cast<float>(inColor.a) / DIVISOR + ADDEND);
 }
 
 inline Urho3D::Vector3 ToVector3(const JPH::Vec3 &inVec)

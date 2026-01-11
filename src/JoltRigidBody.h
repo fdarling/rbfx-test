@@ -30,11 +30,14 @@ public:
     JPH::BodyID GetBodyID() {return joltBodyId_;}
     JPH::BodyID GetBodyID() const {return joltBodyId_;}
 
+    void Activate();
     void ApplyForce(const Urho3D::Vector3 &force);
     void MoveKinematic(const Urho3D::Vector3 &pos, const Urho3D::Quaternion &rot, float deltaTime);
 
     Urho3D::Vector3 GetAngularVelocity() const;
     Urho3D::Vector3 GetLinearVelocity() const;
+    Urho3D::Vector3 GetPosition() const;
+    Urho3D::Quaternion GetRotation() const;
     Urho3D::Matrix3x4 GetWorldTransform() const;
     float GetMass() const;
 
@@ -50,7 +53,7 @@ protected:
     void OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scene) override;
 private:
     template <typename ValueType, typename BodyInterfaceType>
-    ValueType BodyAttributeGetter(ValueType (BodyInterfaceType::*GetterFunc)(const JPH::BodyID &) const) const;
+    ValueType BodyAttributeGetter(ValueType (BodyInterfaceType::*GetterFunc)(const JPH::BodyID &) const, const ValueType &defaultValue = ValueType()) const;
     template <typename ValueType, typename BodyInterfaceType, typename... Args, typename... RestArgs>
     void BodyAttributeSetter(
         ValueType JPH::BodyCreationSettings::*SettingPtr,

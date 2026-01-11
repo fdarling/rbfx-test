@@ -20,15 +20,11 @@ Ladder::Ladder(Urho3D::Node *node) :
     node_(node),
     body_(node_->GetComponent<JoltRigidBody>())
 {
-    /*btRigidBody * const body = body_->GetBody();
-    body->setUserIndex(PhysicsUserIndex::Ladder);*/
     node_->SetVar("GameObjectPtr", this);
 }
 
 Ladder::~Ladder()
 {
-    // for (ConstraintMap::iterator it = constrainedNodes_.begin(); it != constrainedNodes_.end(); ++it)
-        // delete it->second;
     constrainedNodes_.clear();
     node_->Remove();
     node_ = nullptr;
@@ -116,14 +112,6 @@ void Ladder::ConstrainNode(Urho3D::Node *otherNode)
     SetConstraintFromAABB(constraint_settings, constraintBB);
     JPH::Ref<JPH::SixDOFConstraint> constraint = static_cast<JPH::SixDOFConstraint *>(body_interface.CreateConstraint(&constraint_settings, bodyIdA, bodyIdB));
     physicsWorld->GetPhysicsSystem().AddConstraint(constraint); // TODO is this necessary?
-
-    // only allow rotation about the Z axis
-    // constraint->setAngularLowerLimit(btVector3(0, -SIMD_INFINITY, 0));
-    // constraint->setAngularUpperLimit(btVector3(0, SIMD_INFINITY, 0));
-
-    // allow all rotation
-    // constraint->setAngularLowerLimit(btVector3(-SIMD_INFINITY, -SIMD_INFINITY, -SIMD_INFINITY));
-    // constraint->setAngularUpperLimit(btVector3( SIMD_INFINITY,  SIMD_INFINITY,  SIMD_INFINITY));
 
     // remember that we constrained it
     constrainedNodes_.insert({otherNode, constraint});

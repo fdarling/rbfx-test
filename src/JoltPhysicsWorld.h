@@ -58,8 +58,7 @@ private:
     float accumulator_;
     float fixedTimeStep_;
     int simulatedSteps_;
-    // TODO MyBodyActivationListener
-    // TODO MyContactListener
+    // TODO JPH::BodyActivationListener
 };
 
 void URHO3D_API RegisterPhysicsLibrary(Urho3D::Context *context);

@@ -39,6 +39,8 @@ public:
         return *joltUnscaledShape_;
     }
 
+    Urho3D::BoundingBox GetWorldBoundingBox() const;
+
     void NotifyRigidBody();
 protected:
     void OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scene) override;
