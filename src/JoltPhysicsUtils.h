@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Urho3D/Math/BoundingBox.h>
 #include <Urho3D/Math/Quaternion.h>
 #include <Urho3D/Math/Color.h>
 #include <Urho3D/Math/Vector3.h>
@@ -9,6 +10,7 @@
 #include <Jolt/Math/Vec3.h>
 #include <Jolt/Math/Quat.h>
 #include <Jolt/Math/Mat44.h>
+#include <Jolt/Geometry/AABox.h>
 
 inline JPH::Vec3 ToJoltVec3(const Urho3D::Vector3 &inVec)
 {
@@ -45,4 +47,12 @@ inline Urho3D::Matrix4 ToMatrix4(const JPH::Mat44 &inMat)
 inline Urho3D::Quaternion ToQuaternion(const JPH::Quat &inQuat)
 {
     return Urho3D::Quaternion(inQuat.GetW(), inQuat.GetX(), inQuat.GetY(), inQuat.GetZ());
+}
+
+inline Urho3D::BoundingBox ToBoundingBox(const JPH::AABox &inBB)
+{
+    return Urho3D::BoundingBox(
+        Urho3D::Vector3(inBB.mMin.GetX(), inBB.mMin.GetY(), inBB.mMin.GetZ()),
+        Urho3D::Vector3(inBB.mMax.GetX(), inBB.mMax.GetY(), inBB.mMax.GetZ())
+    );
 }

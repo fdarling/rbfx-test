@@ -25,6 +25,20 @@ public:
     //void SetCustomTriangleMesh(Urho3D::CustomGeometry *custom, const Urho3D::Vector3 &scale = Urho3D::Vector3::ONE, const Urho3D::Vector3 &position = Urho3D::Vector3::ZERO, const Urho3D::Quaternion &rotation = Urho3D::Quaternion::IDENTITY);
     void SetConvexHull(Urho3D::Model *model, unsigned lodLevel = 0, const Urho3D::Vector3 &scale = Urho3D::Vector3::ONE, const Urho3D::Vector3 &position = Urho3D::Vector3::ZERO, const Urho3D::Quaternion &rotation = Urho3D::Quaternion::IDENTITY);
 
+    // TODO return references or pointers?
+    JPH::Shape & GetShape()
+    {
+        if (joltScaledShape_)
+            return *joltScaledShape_;
+        return *joltUnscaledShape_;
+    }
+    const JPH::Shape & GetShape() const
+    {
+        if (joltScaledShape_)
+            return *joltScaledShape_;
+        return *joltUnscaledShape_;
+    }
+
     void NotifyRigidBody();
 protected:
     void OnSceneSet(Urho3D::Scene *previousScene, Urho3D::Scene *scene) override;

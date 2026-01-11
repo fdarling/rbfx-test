@@ -1,16 +1,13 @@
 #include "Ladder.h"
+#include "JoltPhysicsWorld.h"
+#include "JoltCollisionShape.h"
+#include "JoltRigidBody.h"
 #include "globals.h"
 
 #include <Urho3D/Scene/Scene.h>
-#include <Urho3D/Physics/PhysicsUtils.h>
-#include <Urho3D/Physics/PhysicsWorld.h>
-#include <Urho3D/Physics/RigidBody.h>
-#include <Urho3D/Physics/CollisionShape.h>
 
-#include <Bullet/BulletCollision/CollisionShapes/btCollisionShape.h>
-#include <Bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
-#include <Bullet/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h>
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/PhysicsSystem.h>
 
 #include <array> // for std::array<>
 #include <algorithm> // for std::max_element()
@@ -18,23 +15,20 @@
 
 using Urho3D::Vector3;
 using Urho3D::BoundingBox;
-using Urho3D::RigidBody;
-using Urho3D::CollisionShape;
-using Urho3D::ToBtVector3;
 
 Ladder::Ladder(Urho3D::Node *node) :
     node_(node),
-    body_(node_->GetComponent<RigidBody>())
+    body_(node_->GetComponent<JoltRigidBody>())
 {
-    btRigidBody * const body = body_->GetBody();
-    body->setUserIndex(PhysicsUserIndex::Ladder);
+    /*btRigidBody * const body = body_->GetBody();
+    body->setUserIndex(PhysicsUserIndex::Ladder);*/
     node_->SetVar("GameObjectPtr", this);
 }
 
 Ladder::~Ladder()
 {
-    for (ConstraintMap::iterator it = constrainedNodes_.begin(); it != constrainedNodes_.end(); ++it)
-        delete it->second;
+    // for (ConstraintMap::iterator it = constrainedNodes_.begin(); it != constrainedNodes_.end(); ++it)
+        // delete it->second;
     constrainedNodes_.clear();
     node_->Remove();
     node_ = nullptr;
@@ -80,6 +74,16 @@ static Urho3D::BoundingBox GetLocalAABB(Urho3D::CollisionShape *collisionShape)
     return BoundingBox(Vector3(aabbMin), Vector3(aabbMax));
 }
 
+static void SetConstraintFromAABB(JPH::SixDOFConstraintSettings &settings, const JPH::AABox &aabb)
+{
+    settings.mLimitMin[JPH::SixDOFConstraintSettings::EAxis::TranslationX] = aabb.mMin.GetX();
+    settings.mLimitMax[JPH::SixDOFConstraintSettings::EAxis::TranslationX] = aabb.mMax.GetX();
+    settings.mLimitMin[JPH::SixDOFConstraintSettings::EAxis::TranslationY] = aabb.mMin.GetY();
+    settings.mLimitMax[JPH::SixDOFConstraintSettings::EAxis::TranslationY] = aabb.mMax.GetY();
+    settings.mLimitMin[JPH::SixDOFConstraintSettings::EAxis::TranslationZ] = aabb.mMin.GetZ();
+    settings.mLimitMax[JPH::SixDOFConstraintSettings::EAxis::TranslationZ] = aabb.mMax.GetZ();
+}
+
 void Ladder::ConstrainNode(Urho3D::Node *otherNode)
 {
     // make sure we didn't already constrain it
@@ -87,48 +91,39 @@ void Ladder::ConstrainNode(Urho3D::Node *otherNode)
         return;
 
     // make sure the node has a physics body
-    RigidBody * const rigidBodyB = otherNode->GetComponent<RigidBody>();
-    if (!rigidBodyB)
+    JoltRigidBody * const rigidBodyB = otherNode->GetComponent<JoltRigidBody>();
+    JoltPhysicsWorld * const physicsWorld = node_->GetScene()->GetComponent<JoltPhysicsWorld>();
+    JoltCollisionShape * const physicsShape = node_->GetComponent<JoltCollisionShape>();
+    if (!rigidBodyB || !physicsWorld || !physicsShape)
         return;
+    JPH::PhysicsSystem &physicsSystem = physicsWorld->GetPhysicsSystem();
+    JPH::BodyInterface &body_interface = physicsSystem.GetBodyInterface();
 
-    // access the lower level Bullet bodies
-    btRigidBody * const bodyA = body_->GetBody();
-    btRigidBody * const bodyB = rigidBodyB->GetBody();
-
-    // reference frames (currently identity)
-    btTransform frameInA;
-    frameInA.setIdentity();
-    btTransform frameInB;
-    frameInB.setIdentity();
-
-    // create the constraint for limit the distance from the ladder
-    btGeneric6DofConstraint * const constraint = new btGeneric6DofConstraint(
-        *bodyA,
-        *bodyB,
-        frameInA,
-        frameInB,
-        true // useLinearReferenceFrameA
-    );
+    // get the body IDs used for the constraint
+    const JPH::BodyID bodyIdA = body_->GetBodyID();
+    const JPH::BodyID bodyIdB = rigidBodyB->GetBodyID();
 
     // partial XYZ volume around "ladder"
-    const Vector3 v = node_->GetScale()*node_->GetComponent<CollisionShape>()->GetSize()/2.0f;
-    const BoundingBox shapeBB = GetLocalAABB(node_->GetComponent<CollisionShape>());
-    static const btScalar TOLERANCE = 0.05;
-    const btVector3 expansion3D = btVector3(PLAYER_RADIUS + TOLERANCE, PLAYER_HEIGHT/2.0 + TOLERANCE, PLAYER_RADIUS + TOLERANCE);
-    constraint->setLinearLowerLimit(ToBtVector3(shapeBB.min_) - expansion3D);
-    constraint->setLinearUpperLimit(ToBtVector3(shapeBB.max_) + expansion3D);
+    static const btScalar TOLERANCE = 0.001;
+    const JPH::Vec3 expansion3D(PLAYER_RADIUS + TOLERANCE, PLAYER_HEIGHT/2.0 + TOLERANCE, PLAYER_RADIUS + TOLERANCE);
+    JPH::AABox constraintBB = physicsShape->GetShape().GetWorldSpaceBounds(JPH::Mat44::sIdentity(), JPH::Vec3::sReplicate(1.0f));
+    constraintBB.ExpandBy(expansion3D);
+
+    // create the constraint for limit the distance from the ladder
+    JPH::SixDOFConstraintSettings constraint_settings;
+    constexpr float LADDER_MARGIN = 0.001;
+    constraint_settings.mSpace = JPH::EConstraintSpace::LocalToBodyCOM;
+    SetConstraintFromAABB(constraint_settings, constraintBB);
+    JPH::Ref<JPH::SixDOFConstraint> constraint = static_cast<JPH::SixDOFConstraint *>(body_interface.CreateConstraint(&constraint_settings, bodyIdA, bodyIdB));
+    physicsWorld->GetPhysicsSystem().AddConstraint(constraint); // TODO is this necessary?
 
     // only allow rotation about the Z axis
     // constraint->setAngularLowerLimit(btVector3(0, -SIMD_INFINITY, 0));
     // constraint->setAngularUpperLimit(btVector3(0, SIMD_INFINITY, 0));
 
     // allow all rotation
-    constraint->setAngularLowerLimit(btVector3(-SIMD_INFINITY, -SIMD_INFINITY, -SIMD_INFINITY));
-    constraint->setAngularUpperLimit(btVector3( SIMD_INFINITY,  SIMD_INFINITY,  SIMD_INFINITY));
-
-    // actually add the constraint
-    btDiscreteDynamicsWorld * const world = body_->GetPhysicsWorld()->GetWorld();
-    world->addConstraint(constraint, false); // the bool is for whether the constrained bodies are exempt from colliding with each other
+    // constraint->setAngularLowerLimit(btVector3(-SIMD_INFINITY, -SIMD_INFINITY, -SIMD_INFINITY));
+    // constraint->setAngularUpperLimit(btVector3( SIMD_INFINITY,  SIMD_INFINITY,  SIMD_INFINITY));
 
     // remember that we constrained it
     constrainedNodes_.insert({otherNode, constraint});
@@ -136,17 +131,19 @@ void Ladder::ConstrainNode(Urho3D::Node *otherNode)
 
 void Ladder::UnconstrainNode(Urho3D::Node *otherNode)
 {
+    // get the physics system
+    JoltPhysicsWorld * const physicsWorld = node_->GetScene()->GetComponent<JoltPhysicsWorld>();
+    if (!physicsWorld)
+        return;
+    JPH::PhysicsSystem &physicsSystem = physicsWorld->GetPhysicsSystem();
+
     // make sure we actually have it
     ConstraintMap::iterator it = constrainedNodes_.find(otherNode);
     if (it == constrainedNodes_.end())
         return;
 
     // remove the constraint from the system
-    btDiscreteDynamicsWorld * const world = body_->GetPhysicsWorld()->GetWorld();
-    world->removeConstraint(it->second);
-
-    // delete the constraint
-    delete it->second;
+    physicsSystem.RemoveConstraint(it->second);
 
     // forget the constraint
     constrainedNodes_.erase(it);

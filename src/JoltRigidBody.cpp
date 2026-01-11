@@ -45,6 +45,20 @@ void JoltRigidBody::ReleaseBody()
     }
 }
 
+void JoltRigidBody::ApplyForce(const Urho3D::Vector3 &force)
+{
+    // TODO defer the force until we have the ability to apply it!
+
+    // make sure we have a body to update
+    if (!joltPhysicsWorld_ || joltBodyId_.IsInvalid())
+        return;
+
+    // get the body interface
+    JPH::BodyInterface &body_interface = joltPhysicsWorld_->GetPhysicsSystem().GetBodyInterface();
+
+    body_interface.AddForce(joltBodyId_, ToJoltVec3(force));
+}
+
 void JoltRigidBody::MoveKinematic(const Urho3D::Vector3 &pos, const Urho3D::Quaternion &rot, float deltaTime)
 {
     // TODO defer the movement until we have the ability to apply it!
@@ -120,6 +134,16 @@ Urho3D::Vector3 JoltRigidBody::GetLinearVelocity() const
     return ToVector3(BodyAttributeGetter(&JPH::BodyInterface::GetLinearVelocity));
 }
 
+Urho3D::Matrix3x4 JoltRigidBody::GetWorldTransform() const
+{
+    return Urho3D::Matrix3x4(ToMatrix4(BodyAttributeGetter(&JPH::BodyInterface::GetWorldTransform)));
+}
+
+float JoltRigidBody::GetMass() const
+{
+    return joltBodySettings_.GetMassProperties().mMass;
+}
+
 void JoltRigidBody::SetAllowedDOFs(AllowedDOFs dofs)
 {
     // bail if we already have this setting
@@ -155,6 +179,15 @@ void JoltRigidBody::SetFriction(float friction)
         &JPH::BodyCreationSettings::mFriction,
         &JPH::BodyInterface::SetFriction,
         friction
+    );
+}
+
+void JoltRigidBody::SetGravityFactor(float gravityFactor)
+{
+    BodyAttributeSetter(
+        &JPH::BodyCreationSettings::mGravityFactor,
+        &JPH::BodyInterface::SetGravityFactor,
+        gravityFactor
     );
 }
 

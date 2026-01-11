@@ -29,7 +29,7 @@ void JoltContactListener::OnContactAdded(const JPH::Body &inBody1, const JPH::Bo
     if (rigidBodyA)
         nodeA = rigidBodyA->GetNode();
     if (rigidBodyB)
-        nodeB = rigidBodyA->GetNode();
+        nodeB = rigidBodyB->GetNode();
 
     // Urho3D::VariantMap &eventData = physicsWorld_->GetEventDataMap();
     // eventData[P_WORLD] = physicsWorld_;

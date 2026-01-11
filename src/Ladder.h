@@ -2,18 +2,20 @@
 
 #include <unordered_map>
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+
 // Urho3D forward declarations
 namespace Urho3D {
 
 class Scene;
 class Node;
-class RigidBody;
 class Vector3;
 
 } // namespace Urho3D
 
-// Bullet forward declarations
-class btGeneric6DofConstraint;
+// custom forward declarations
+class JoltRigidBody;
 
 class Ladder
 {
@@ -29,8 +31,8 @@ public:
     Urho3D::Node * GetNode() {return node_;}
     const Urho3D::Node * GetNode() const {return node_;}
 protected:
-    typedef std::unordered_map<Urho3D::Node*, btGeneric6DofConstraint*> ConstraintMap;
+    typedef std::unordered_map<Urho3D::Node*, JPH::Ref<JPH::SixDOFConstraint>> ConstraintMap;
     Urho3D::Node *node_;
-    Urho3D::RigidBody *body_;
+    JoltRigidBody *body_;
     ConstraintMap constrainedNodes_;
 };

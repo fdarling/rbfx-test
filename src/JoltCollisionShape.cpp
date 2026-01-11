@@ -169,6 +169,7 @@ JoltCollisionShape::JoltCollisionShape(Urho3D::Context *context) :
     recreateShape_(true)
 {
     // URHO3D_LOGINFO("JoltCollisionShape::JoltCollisionShape()");
+    UpdateShape();
 }
 
 JoltCollisionShape::~JoltCollisionShape()
@@ -334,7 +335,11 @@ void JoltCollisionShape::UpdateShape()
     }*/
     ea::vector< JPH::Ref<JPH::Shape> > shapes;
     // TODO use std::visit instead of std::holds_alternative
-    if (std::holds_alternative<ModelShapeData>(shapeData_))
+    if (std::holds_alternative<std::monostate>(shapeData_))
+    {
+        // noop
+    }
+    else if (std::holds_alternative<ModelShapeData>(shapeData_))
     {
         ModelShapeData &modelShapeData = std::get<ModelShapeData>(shapeData_);
         if (modelShapeData.model_->GetNumGeometries())
@@ -349,7 +354,7 @@ void JoltCollisionShape::UpdateShape()
     {
         CapsuleShapeData &capsuleShapeData = std::get<CapsuleShapeData>(shapeData_);
         // shapes.push_back(new JPH::CapsuleShape(capsuleShapeData.height_/2.0, capsuleShapeData.diameter_/2.0));
-        shapes.push_back(new JPH::CapsuleShape(capsuleShapeData.height_/2.0*1.25, capsuleShapeData.diameter_/2.0*1.25)); // HACK make capsule bigger so we can see it outside of the graphical representation
+        shapes.push_back(new JPH::CapsuleShape(capsuleShapeData.height_/2.0, capsuleShapeData.diameter_/2.0));
     }
     else if (std::holds_alternative<SphereShapeData>(shapeData_))
     {
@@ -357,8 +362,6 @@ void JoltCollisionShape::UpdateShape()
         shapes.push_back(new JPH::SphereShape(sphereShapeData.diameter_/2.0));
         // shapes.push_back(new JPH::SphereShape(sphereShapeData.diameter_/2.0*1.25)); // HACK make sphere bigger so we can see it outside of the graphical representation
     }
-    else
-        return;
     // shapes.push_back(new JPH::BoxShape(JPH::Vec3(1.0, 1.0, 1.0))); // HACK for testing
     if (shapes.size() == 0)
     {

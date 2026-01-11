@@ -3,6 +3,8 @@
 #include "JoltPhysicsWorld.h"
 #include "JoltRigidBody.h"
 #include "JoltCollisionShape.h"
+#include "JoltPhysicsEvents.h"
+#include "JoltPhysicsUtils.h"
 #include "CreateMaterial.h"
 #include "CreatePrimitives.h"
 #include "globals.h"
@@ -11,28 +13,21 @@
 #include <Urho3D/Graphics/Material.h>
 #include <Urho3D/Graphics/Model.h>
 #include <Urho3D/Graphics/StaticModel.h>
-// #include <Urho3D/Physics/PhysicsEvents.h>
-// #include <Urho3D/Physics/PhysicsWorld.h>
-// #include <Urho3D/Physics/RigidBody.h>
-// #include <Urho3D/Physics/CollisionShape.h>
 #include <Urho3D/Scene/Scene.h>
 
-// #include <Bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-// #include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 
 using Urho3D::Time;
 using Urho3D::Node;
 using Urho3D::Vector3;
 using Urho3D::StaticModel;
-// using Urho3D::RigidBody;
-// using Urho3D::CollisionShape;
 using Urho3D::BoundingBox;
 using Urho3D::Color;
 using Urho3D::Clamp;
 using Urho3D::Quaternion;
 using Urho3D::OUTSIDE;
-// using Urho3D::E_NODECOLLISIONSTART;
-// namespace NodeCollisionStart = Urho3D::NodeCollisionStart;
 
 Urho3D::SharedPtr<Urho3D::Model> Player::cylinderModel_;
 
@@ -41,6 +36,7 @@ Player::Player(Urho3D::Scene *scene, const Urho3D::Vector3 &pos) :
     node_(nullptr),
     walkDir_(Vector3::ZERO),
     ladder_(nullptr),
+    ladderToGrab_(nullptr),
     onGround_(false),
     wantJump_(false)
 {
@@ -49,7 +45,7 @@ Player::Player(Urho3D::Scene *scene, const Urho3D::Vector3 &pos) :
 
     // possibly create and cache the model
     if (!cylinderModel_)
-        cylinderModel_ = CreateCapsuleModel(scene->GetContext(), PLAYER_RADIUS, PLAYER_HEIGHT-2.0*PLAYER_RADIUS); // TODO support multiple contexts!
+        cylinderModel_ = CreateCapsuleModel(scene->GetContext(), PLAYER_RADIUS, PLAYER_HEIGHT); // TODO support multiple contexts!
 
     // use the model
     StaticModel * const sm = node_->CreateComponent<StaticModel>();
@@ -69,15 +65,9 @@ Player::Player(Urho3D::Scene *scene, const Urho3D::Vector3 &pos) :
     body->SetAllowedDOFs(JoltRigidBody::AllowedDOFs::TranslationX | JoltRigidBody::AllowedDOFs::TranslationY | JoltRigidBody::AllowedDOFs::TranslationZ);
 
     // create physics shape
-    /*CollisionShape * const shape = node_->CreateComponent<CollisionShape>();
-    shape->SetCapsule(PLAYER_RADIUS*2.0, PLAYER_HEIGHT);
-
-    btRigidBody * const bulletBody = body->GetBody();
-    bulletBody->setUserIndex(PhysicsUserIndex::Player);
-
-    SubscribeToEvent(node_, E_NODECOLLISIONSTART, URHO3D_HANDLER(Player, HandleNodeCollisionStart));*/
     JoltCollisionShape * const shape = node_->CreateComponent<JoltCollisionShape>();
     shape->SetCapsule(PLAYER_RADIUS*2.0, PLAYER_HEIGHT);
+    SubscribeToEvent(node_, E_JOLTNODECOLLISIONSTART, URHO3D_HANDLER(Player, HandleNodeCollisionStart));
 }
 
 Player::~Player()
@@ -125,36 +115,62 @@ static Vector3 adjustWalkDir(Player *player, const Vector3 &walkDir)
     return newWalkDir;
 };
 
-struct ContactCallback : public btCollisionWorld::ContactResultCallback
-{
-    btScalar addSingleResult(btManifoldPoint& cp, const btCollisionObjectWrapper* colObj0Wrap, int, int, const btCollisionObjectWrapper* colObj1Wrap, int, int) override
-    {
-        btVector3 normal = cp.m_normalWorldOnB;
-        if (colObj1Wrap->m_collisionObject->getUserIndex() == PhysicsUserIndex::Player)
-            normal = -normal; // Player is second body
-        if (normal.getY() > 0.4 && cp.getDistance() < 0.f)
-        {
-            if (colObj0Wrap->m_collisionObject->getUserIndex() != PhysicsUserIndex::Ladder &&
-                colObj1Wrap->m_collisionObject->getUserIndex() != PhysicsUserIndex::Ladder)
-            {
-                onGround = true;
-            }
-        }
-        return 0.0;
-    }
-    // bool onLadder{false};
-    bool onGround{false};
-};
-
 void Player::Advance()
 {
-    // TODO
-    /*RigidBody * const body = node_->GetComponent<RigidBody>();
+    if (ladderToGrab_)
+    {
+        Ladder * const ladder = ladderToGrab_;
+        ladderToGrab_ = nullptr;
+        GrabLadder(ladder);
+    }
+    // get the physics objects
+    JoltRigidBody * const body = node_->GetComponent<JoltRigidBody>();
+    JoltCollisionShape * const shape = node_->GetComponent<JoltCollisionShape>();
+    JoltPhysicsWorld * const physicsWorld = node_->GetScene()->GetComponent<JoltPhysicsWorld>();
+    if (!body || !physicsWorld)
+        return;
+    JPH::PhysicsSystem &physicsSystems = physicsWorld->GetPhysicsSystem();
+    JPH::BodyInterface &body_interface = physicsSystems.GetBodyInterface();
+
+    // get the body's transform
+    const JPH::Mat44 centerOfMassTransform = body_interface.GetCenterOfMassTransform(body->GetBodyID());
+    // const Urho3D::Matrix3x4 worldTransform = body->GetWorldTransform();
 
     // test if we are on the ground
-    ContactCallback callback;
-    body->GetPhysicsWorld()->GetWorld()->contactTest(body->GetBody(), callback);
-    onGround_ = callback.onGround;
+    const JPH::NarrowPhaseQuery &query = physicsSystems.GetNarrowPhaseQuery();
+    JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> collector;
+
+    // perform collision test to detect standing on the ground
+    query.CollideShape(
+        &shape->GetShape(), // shape
+        JPH::Vec3::sReplicate(1.0f), // scale TODO how am I supposed to differentiate this from the world transform?
+        centerOfMassTransform, // center of mass transform
+        JPH::CollideShapeSettings(), // collision settings
+        JPH::Vec3::sZero(), // base offset?
+        collector, // results destination
+        JPH::BroadPhaseLayerFilter(),
+        JPH::ObjectLayerFilter(),
+        JPH::IgnoreSingleBodyFilter(body->GetBodyID())
+    );
+
+    // check collision results
+    {
+        bool onGround = false;
+        if (collector.HadHit())
+        {
+            for (const JPH::CollideShapeResult &result : collector.mHits)
+            {
+                const JPH::Vec3 normalDir = -result.mPenetrationAxis.Normalized();
+                // const JPH::BodyID otherBodyID = result.mBodyID2;
+                if (normalDir.GetY() > 0.4 && result.mPenetrationDepth >= 0.0)
+                {
+                    onGround = true;
+                    break;
+                }
+            }
+        }
+        onGround_ = onGround;
+    }
 
     // handle special ladder behavior
     if (IsOnLadder())
@@ -170,7 +186,7 @@ void Player::Advance()
         const Vector3 adjustedDir = adjustWalkDir(this, flyDir_);
 
         // when on the ladder, we move at a constant speed (rather than accelerate)
-        body->Activate();
+        // body->Activate();
         body->SetLinearVelocity(adjustedDir*PLAYER_WALK_SPEED);
     }
     else if (walkDir_ != Vector3::ZERO)
@@ -182,7 +198,7 @@ void Player::Advance()
         const Vector3 force = mass*walk_accel*walkDir_;
         if (force != Vector3::ZERO)
         {
-            body->Activate();
+            // body->Activate();
             body->ApplyForce(force);
             // std::cout << "force: (" << force.x_ << "," << force.y_ << "," << force.z_ << ")" << std::endl;
         }
@@ -196,16 +212,16 @@ void Player::Advance()
         GrabLadder(nullptr);
 
         // jump away
-        body->Activate();
+        // body->Activate();
         body->SetLinearVelocity(v);
     }
     else if (wantJump_ && IsOnGround())
     {
         Vector3 v = body->GetLinearVelocity();
         v.y_ = PLAYER_JUMP_VELOCITY;
-        body->Activate();
+        // body->Activate();
         body->SetLinearVelocity(v);
-    }*/
+    }
 }
 
 void Player::SetWalkAndFlyDirections(const Urho3D::Vector3 &walkDir, const Urho3D::Vector3 &flyDir)
@@ -273,19 +289,24 @@ Urho3D::Vector3 Player::GetLadderNormal() const
     return ladder_->GetNormalForPoint(node_->GetPosition());
 }
 
-/*void Player::HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
+void Player::HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
 {
-    Node * const nodeB = static_cast<Node*>(eventData[NodeCollisionStart::P_OTHERNODE].GetPtr());
-    RigidBody * const bodyB = static_cast<RigidBody*>(eventData[NodeCollisionStart::P_OTHERBODY].GetPtr());
+    // URHO3D_LOGINFO("Player::HandleNodeCollisionStart()");
+    Node * const nodeB = static_cast<Node*>(eventData[JoltNodeCollisionStart::P_OTHERNODE].GetPtr());
+    JoltRigidBody * const bodyB = static_cast<JoltRigidBody*>(eventData[JoltNodeCollisionStart::P_OTHERBODY].GetPtr());
     if (nodeB && bodyB)
     {
-        if (bodyB->GetBody()->getUserIndex() == PhysicsUserIndex::Ladder)
+        // if (bodyB->GetBody()->getUserIndex() == PhysicsUserIndex::Ladder)
         {
             Ladder * const ladder = reinterpret_cast<Ladder*>(nodeB->GetVar("GameObjectPtr").GetVoidPtr());
-            GrabLadder(ladder);
+            if (ladder)
+            {
+                // URHO3D_LOGINFO("Player::HandleNodeCollisionStart() grabbing ladder!");
+                ladderToGrab_ = ladder;
+            }
         }
     }
-}*/
+}
 
 void Player::GrabLadder(Ladder *ladder)
 {
@@ -301,13 +322,12 @@ void Player::GrabLadder(Ladder *ladder)
     ladder_ = ladder;
 
     // access our physics body
-    // TODO
-    /*RigidBody * const body = node_->GetComponent<RigidBody>();
+    JoltRigidBody * const body = node_->GetComponent<JoltRigidBody>();
 
     // attach to the new ladder
     if (ladder)
         ladder->ConstrainNode(node_);
 
     // no gravity when on any ladder
-    body->SetUseGravity(!ladder);*/
+    body->SetGravityFactor(ladder ? 0.0 : 1.0);
 }

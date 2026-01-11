@@ -9,13 +9,8 @@
 #include <Urho3D/Physics/RigidBody.h>
 #include <Urho3D/Scene/Node.h>
 
-#include <Bullet/BulletDynamics/Dynamics/btRigidBody.h>
-
 using Urho3D::Node;
 using Urho3D::Vector3;
-using Urho3D::RigidBody;
-using Urho3D::E_NODECOLLISIONSTART;
-namespace NodeCollisionStart = Urho3D::NodeCollisionStart;
 
 JumpPad::JumpPad(Urho3D::Node *node) :
     Urho3D::Object(node->GetContext()),
