@@ -92,6 +92,7 @@ public:
         yaw_(0.0f),
         pitch_(0.0f),
         cameraMode_(CameraMode::FreeLook),
+        drawEnabled_(true),
         drawDebug_(false),
         drawPhysicsDebug_(true),
         shadowsEnabled_(true),
@@ -296,7 +297,15 @@ public:
 
         // toggle graphics debug rendering
         if (input->GetKeyPress(KEY_Z))
-            drawDebug_ = !drawDebug_;
+        {
+            if (input->GetKeyDown(KEY_LSHIFT))
+            {
+                drawEnabled_ = !drawEnabled_;
+                // TODO actually toggle scene drawing
+            }
+            else
+                drawDebug_ = !drawDebug_;
+        }
 
         // toggle wireframe rendering
         if (input->GetKeyPress(KEY_X))
@@ -364,8 +373,8 @@ public:
 
     void HandlePostRenderUpdate(StringHash eventType, VariantMap &eventData)
     {
-        // if (drawDebug_)
-            // GetSubsystem<Renderer>()->DrawDebugGeometry(false);
+        if (drawDebug_)
+            GetSubsystem<Renderer>()->DrawDebugGeometry(false);
     }
 
     void HandleMouseMove(StringHash eventType, VariantMap &eventData)
@@ -421,6 +430,7 @@ protected:
     float yaw_;
     float pitch_;
     CameraMode cameraMode_;
+    bool drawEnabled_;
     bool drawDebug_;
     bool drawPhysicsDebug_;
     bool shadowsEnabled_;

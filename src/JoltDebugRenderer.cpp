@@ -174,6 +174,7 @@ JoltDebugRenderer::JoltDebugRenderer(Urho3D::Context* context)
     // URHO3D_LOGINFO("JoltDebugRenderer constructor called");
     SetEnabled(true);
     Initialize(); // we are required to call this! Jolt will crash if you don't
+    SubscribeToEvent(Urho3D::E_BEGINVIEWUPDATE, URHO3D_HANDLER(JoltDebugRenderer, HandleBeginViewUpdate));
     SubscribeToEvent(Urho3D::E_ENDFRAME, URHO3D_HANDLER(JoltDebugRenderer, HandleEndFrame));
 }
 
@@ -365,6 +366,23 @@ void JoltDebugRenderer::OnWorldBoundingBoxUpdate()
     // URHO3D_LOGINFO("JoltDebugRenderer::OnWorldBoundingBoxUpdate()");
 #endif // MASSIVE_LOGGING
     worldBoundingBox_ = Urho3D::BoundingBox(std::numeric_limits<float>::min(), std::numeric_limits<float>::max());
+}
+
+void JoltDebugRenderer::HandleBeginViewUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
+{
+#ifdef MASSIVE_LOGGING
+    URHO3D_LOGINFO("JoltDebugRenderer::HandleBeginViewUpdate()");
+#endif // MASSIVE_LOGGING
+    Urho3D::Scene * const scene = static_cast<Urho3D::Scene*>(eventData[Urho3D::BeginViewUpdate::P_SCENE].GetPtr());
+    if (scene != GetScene())
+        return;
+    Urho3D::Camera * const camera = static_cast<Urho3D::Camera*>(eventData[Urho3D::BeginViewUpdate::P_CAMERA].GetPtr());
+    if (!camera)
+        return;
+    Urho3D::Node * const cameraNode = camera->GetNode();
+    if (!cameraNode)
+        return;
+    cameraPos_ = cameraNode->GetWorldPosition();
 }
 
 void JoltDebugRenderer::HandleEndFrame(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)

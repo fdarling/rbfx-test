@@ -21,10 +21,10 @@
 #include <Jolt/RegisterTypes.h>
 
 static const std::size_t URHO3D_JOLT_PHYSICS_DEFAULT_TEMP_ALLOCATION_SIZE = 10 * 1024 * 1024;
-static const uint cMaxBodies = 1024; // TODO increase to 65536
+static const uint cMaxBodies = 65536; // TODO increase to 65536
 static const uint cNumBodyMutexes = 0;
-static const uint cMaxBodyPairs = 1024; // TODO increase to 65536
-static const uint cMaxContactConstraints = 1024; // TODO increase to 10240
+static const uint cMaxBodyPairs = 65536; // TODO increase to 65536
+static const uint cMaxContactConstraints = 10240; // TODO increase to 10240
 static const float URHO3D_JOLTPHYSICS_DEFAULT_TIME_STEP = 1.0f / 60.0f;
 
 class ObjectLayerPairFilterImpl : public JPH::ObjectLayerPairFilter

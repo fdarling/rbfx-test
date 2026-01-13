@@ -110,6 +110,7 @@ protected:
     /// Recalculate the world-space bounding box.
     void OnWorldBoundingBoxUpdate() override;
 private:
+    void HandleBeginViewUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
     void HandleEndFrame(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
     /// Geometry entries.
     typedef ea::unordered_map<Urho3D::Geometry*, JoltDebugRenderBatchEntry> JoltBatchMap;
