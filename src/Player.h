@@ -37,6 +37,7 @@ public:
     const Urho3D::Node * GetNode() const {return node_;}
 protected:
     void HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
+    void HandleNodeCollision(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData);
     void GrabLadder(Ladder *ladder);
 
     static Urho3D::SharedPtr<Urho3D::Model> cylinderModel_;

@@ -36,6 +36,10 @@ void JoltContactListener::OnContactAdded(const JPH::Body &inBody1, const JPH::Bo
     // eventData[P_NODEB] = nodeB;
     // eventData[P_BODYA] = rigidBodyA;
     // eventData[P_BODYB] = rigidBodyB;
+    // eventData[P_JOLTBODYA] = (void*)&inBody1;
+    // eventData[P_JOLTBODYB] = (void*)&inBody2;
+    // eventData[P_CONTACTMANIFOLD] = (void*)&inManifold;
+    // eventData[P_CONTACTSETTINGS] = (void*)&ioSettings;
     // SendEvent(E_JOLTNODECOLLISIONSTART, eventData);
     // URHO3D_LOGINFO("JoltContactListener::OnContactAdded() nodeA = {}, nodeB = {}", (void*)nodeA, (void*)nodeB);
 
@@ -43,15 +47,24 @@ void JoltContactListener::OnContactAdded(const JPH::Body &inBody1, const JPH::Bo
     if (nodeA)
     {
         eventData[P_BODY] = rigidBodyA;
+        eventData[P_JOLTBODY] = (void*)&inBody1;
         eventData[P_OTHERNODE] = nodeB;
         eventData[P_OTHERBODY] = rigidBodyB;
+        eventData[P_OTHERJOLTBODY] = (void*)&inBody2;
+        eventData[P_CONTACTMANIFOLD] = (void*)&inManifold;
+        eventData[P_CONTACTSETTINGS] = (void*)&ioSettings;
         nodeA->SendEvent(E_JOLTNODECOLLISIONSTART, eventData);
     }
     if (nodeB)
     {
+        const JPH::ContactManifold &swappedContactManifold = inManifold.SwapShapes();
         eventData[P_BODY] = rigidBodyB;
+        eventData[P_JOLTBODY] = (void*)&inBody2;
         eventData[P_OTHERNODE] = nodeA;
         eventData[P_OTHERBODY] = rigidBodyA;
+        eventData[P_OTHERJOLTBODY] = (void*)&inBody1;
+        eventData[P_CONTACTMANIFOLD] = (void*)&swappedContactManifold;
+        eventData[P_CONTACTSETTINGS] = (void*)&ioSettings;
         nodeB->SendEvent(E_JOLTNODECOLLISIONSTART, eventData);
     }
 }
@@ -66,7 +79,7 @@ void JoltContactListener::OnContactPersisted(const JPH::Body &inBody1, const JPH
     if (rigidBodyA)
         nodeA = rigidBodyA->GetNode();
     if (rigidBodyB)
-        nodeB = rigidBodyA->GetNode();
+        nodeB = rigidBodyB->GetNode();
 
     // we are supposed to recycle a common eventData object for performance reasons
     Urho3D::VariantMap &eventData = physicsWorld_->GetEventDataMap();
@@ -77,15 +90,24 @@ void JoltContactListener::OnContactPersisted(const JPH::Body &inBody1, const JPH
     if (nodeA)
     {
         eventData[P_BODY] = rigidBodyA;
+        eventData[P_JOLTBODY] = (void*)&inBody1;
         eventData[P_OTHERNODE] = nodeB;
         eventData[P_OTHERBODY] = rigidBodyB;
+        eventData[P_OTHERJOLTBODY] = (void*)&inBody2;
+        eventData[P_CONTACTMANIFOLD] = (void*)&inManifold;
+        eventData[P_CONTACTSETTINGS] = (void*)&ioSettings;
         nodeA->SendEvent(E_JOLTNODECOLLISION, eventData);
     }
     if (nodeB)
     {
+        const JPH::ContactManifold &swappedContactManifold = inManifold.SwapShapes();
         eventData[P_BODY] = rigidBodyB;
+        eventData[P_JOLTBODY] = (void*)&inBody2;
         eventData[P_OTHERNODE] = nodeA;
         eventData[P_OTHERBODY] = rigidBodyA;
+        eventData[P_OTHERJOLTBODY] = (void*)&inBody1;
+        eventData[P_CONTACTMANIFOLD] = (void*)&swappedContactManifold;
+        eventData[P_CONTACTSETTINGS] = (void*)&ioSettings;
         nodeB->SendEvent(E_JOLTNODECOLLISION, eventData);
     }
 }

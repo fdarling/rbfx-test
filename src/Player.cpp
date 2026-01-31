@@ -63,6 +63,7 @@ Player::Player(Urho3D::Scene *scene, const Urho3D::Vector3 &pos) :
     JoltCollisionShape * const shape = node_->CreateComponent<JoltCollisionShape>();
     shape->SetCapsule(PLAYER_RADIUS*2.0, PLAYER_HEIGHT - PLAYER_RADIUS*2.0);
     SubscribeToEvent(node_, E_JOLTNODECOLLISIONSTART, URHO3D_HANDLER(Player, HandleNodeCollisionStart));
+    SubscribeToEvent(node_, E_JOLTNODECOLLISION, URHO3D_HANDLER(Player, HandleNodeCollision));
 
     // TODO set mass, friction, etc.
     // body->SetMass(PLAYER_MASS);
@@ -305,12 +306,44 @@ void Player::HandleNodeCollisionStart(Urho3D::StringHash eventType, Urho3D::Vari
     JoltRigidBody * const bodyB = static_cast<JoltRigidBody*>(eventData[JoltNodeCollisionStart::P_OTHERBODY].GetPtr());
     if (nodeB && bodyB)
     {
+        const JPH::Body &otherJoltBody = *static_cast<const JPH::Body*>(eventData[JoltNodeCollisionStart::P_OTHERJOLTBODY].GetVoidPtr());
+        const JPH::ContactManifold &contactManifold = *static_cast<const JPH::ContactManifold*>(eventData[JoltNodeCollisionStart::P_CONTACTMANIFOLD].GetVoidPtr());
+        JPH::ContactSettings &contactSettings = *static_cast<JPH::ContactSettings*>(eventData[JoltNodeCollisionStart::P_CONTACTSETTINGS].GetVoidPtr());
+        if (otherJoltBody.IsStatic())
+        {
+            const JPH::Vec3 &normal = contactManifold.mWorldSpaceNormal;
+            if (std::abs(normal.GetY()) < 0.4f)
+            {
+                contactSettings.mCombinedFriction = 0.0f;
+            }
+        }
+        
         // TODO identify the object type before assuming, right now only the Ladder sets GameObjectPtr...
         Ladder * const ladder = reinterpret_cast<Ladder*>(nodeB->GetVar("GameObjectPtr").GetVoidPtr());
         if (ladder)
         {
             // we are not allowed to modify things during this event, defer using the ladder until later
             ladderToGrab_ = ladder;
+        }
+    }
+}
+
+void Player::HandleNodeCollision(Urho3D::StringHash eventType, Urho3D::VariantMap &eventData)
+{
+    Node * const nodeB = static_cast<Node*>(eventData[JoltNodeCollision::P_OTHERNODE].GetPtr());
+    JoltRigidBody * const bodyB = static_cast<JoltRigidBody*>(eventData[JoltNodeCollision::P_OTHERBODY].GetPtr());
+    if (nodeB && bodyB)
+    {
+        const JPH::Body &otherJoltBody = *static_cast<const JPH::Body*>(eventData[JoltNodeCollision::P_OTHERJOLTBODY].GetVoidPtr());
+        const JPH::ContactManifold &contactManifold = *static_cast<const JPH::ContactManifold*>(eventData[JoltNodeCollision::P_CONTACTMANIFOLD].GetVoidPtr());
+        JPH::ContactSettings &contactSettings = *static_cast<JPH::ContactSettings*>(eventData[JoltNodeCollision::P_CONTACTSETTINGS].GetVoidPtr());
+        if (otherJoltBody.IsStatic())
+        {
+            const JPH::Vec3 &normal = contactManifold.mWorldSpaceNormal;
+            if (std::abs(normal.GetY()) < 0.4f)
+            {
+                contactSettings.mCombinedFriction = 0.0f;
+            }
         }
     }
 }
