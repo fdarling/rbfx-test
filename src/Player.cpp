@@ -199,11 +199,17 @@ void Player::Advance()
     }
     else if (walkDir_ != Vector3::ZERO)
     {
-        const Vector3 currentVelocity = body->GetLinearVelocity();
+        const Vector3 currentVel = body->GetLinearVelocity();
+        const Vector3 currentVelH = Vector3(currentVel.x_, 0, currentVel.z_);
+        const Vector3 targetVelH = walkDir_ * PLAYER_WALK_SPEED;
+        Vector3 deltaVel = targetVelH - currentVelH;
+        const float timeStep = 1.0/60.0;
+        const float maxDelta = PLAYER_WALK_ACCEL * timeStep;
+        if (deltaVel.Length() > maxDelta)
+            deltaVel = deltaVel.Normalized() * maxDelta;
         const float mass = body->GetMass();
-        const float speedInDesiredDirection = currentVelocity.DotProduct(walkDir_);
-        const float walk_accel = PLAYER_WALK_ACCEL*Clamp(1.0 - speedInDesiredDirection/PLAYER_WALK_SPEED, 0.0, 1.0);
-        const Vector3 force = mass*walk_accel*walkDir_;
+        const Vector3 force = mass * (deltaVel / timeStep);
+
         if (force != Vector3::ZERO)
         {
             // body->Activate();
